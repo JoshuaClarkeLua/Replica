@@ -1,0 +1,28 @@
+# Project place file
+/Replica.rbxlx
+
+# Roblox Studio lock files
+*.rbxlx
+*.rbxl
+*.lock
+
+# Packages
+Packages/
+
+# Wally
+wally.lock
+
+# Sourcemap
+sourcemap.json
+
+# Roblox
+# Visual Studio
+.vscode/
+
+# moonwave website
+build/
+
+#node modules
+node_modules/
+package.json
+package-lock.json

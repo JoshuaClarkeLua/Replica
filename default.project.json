@@ -1,0 +1,6 @@
+{
+  "name": "replica",
+  "tree": {
+    "$path": "src"
+  }
+}
