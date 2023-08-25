@@ -485,7 +485,10 @@ function Replica:ListenToRaw(listener: (action: string, pathTable: Common.PathTa
 end
 
 function Replica:OnDestroy(listener: (replica: Replica) -> ())
-	assertActive(self)
+	if not self:IsActive() then
+		task.spawn(listener, self)
+		return
+	end
 	return self._OnDestroy:Connect(listener)
 end
 

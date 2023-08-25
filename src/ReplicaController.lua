@@ -144,7 +144,10 @@ function Replica:GetChildren(): {[Replica]: true}
 end
 
 function Replica:OnDestroy(listener: (replica: Replica) -> ())
-	assertActive(self)
+	if not self:IsActive() then
+		task.spawn(listener, self)
+		return
+	end
 	return self._OnDestroy:Connect(listener)
 end
 
@@ -313,7 +316,7 @@ export type Replica = {
 	ArraySet: (self: Replica, path: Common.Path, index: number, value: any, inclusion: {[Player]: boolean}?) -> (),
 	ArrayRemove: (self: Replica, path: Common.Path, index: number, inclusion: {[Player]: boolean}?) -> (),
 	-- Listener methods
-	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection,
+	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection?,
 	OnChange: (self: Replica, path: Common.Path, listener: (new: any, old: any) -> ()) -> Connection,
 	OnNewKey: (self: Replica, path: Common.Path, listener: (keyOrIndex: string | number, value: any) -> ()) -> Connection,
 	OnArrayInsert: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
