@@ -206,14 +206,13 @@ end
 function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any): ()
 	local old = pointer[index]
 	pointer[index] = value
+	fireReplicaSignal(self, "_OnChange", pathTable, value, old)
 	if old == nil then
 		local _newKeyIndex = newKeyIndex or #pathTable
 		local _tempPathTable = table.move(pathTable, 1, _newKeyIndex - 1, 1, {})
 		local _pointer = getTableFromPathTable(self.Data, _tempPathTable)
 		_newKeyRecursive(self, pathTable, _tempPathTable, _pointer, _newKeyIndex)
 	end
-
-	fireReplicaSignal(self, "_OnChange", pathTable, value, old)
 end
 
 function Common.onSetValue(self: any, path: Path, value: any): ()
