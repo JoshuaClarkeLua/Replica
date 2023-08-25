@@ -173,7 +173,7 @@ function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> (
 	return connectReplicaSignal(self, "_OnChange", path, listener)
 end
 
-function Replica:OnNewKey(path: Common.Path, listener: (key: any, value: any) -> ())
+function Replica:OnNewKey(path: Common.Path?, listener: (key: any, value: any) -> ())
 	return connectReplicaSignal(self, "_OnNewKey", path, listener)
 end
 
@@ -189,12 +189,12 @@ function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, valu
 	return connectReplicaSignal(self, "_OnArrayRemove", path, listener)
 end
 
-function Replica:OnRawChange(path: Common.Path, listener: (actionName: string, pathTable: Common.PathTable, ...any) -> ())
+function Replica:OnRawChange(path: Common.Path?, listener: (actionName: string, pathTable: Common.PathTable, ...any) -> ())
 	return connectReplicaSignal(self, "_OnRawChange", path, listener)
 end
 
 function Replica:OnChildAdded(listener: (child: Replica) -> ())
-	return connectReplicaSignal(self, "_OnChildAdded", "", listener)
+	return connectReplicaSignal(self, "_OnChildAdded", nil, listener)
 end
 
 function Replica.new(
@@ -304,11 +304,11 @@ export type Replica = {
 	-- Listener methods
 	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection?,
 	OnChange: (self: Replica, path: Common.Path, listener: (new: any, old: any) -> ()) -> Connection,
-	OnNewKey: (self: Replica, path: Common.Path, listener: (key: any, value: any) -> ()) -> Connection,
+	OnNewKey: (self: Replica, path: Common.Path?, listener: (key: any, value: any) -> ()) -> Connection,
 	OnArrayInsert: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnArraySet: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnArrayRemove: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
-	OnRawChange: (self: Replica, path: Common.Path, listener: (actionName: string, pathArray: Common.PathTable, ...any) -> ()) -> Connection,
+	OnRawChange: (self: Replica, path: Common.Path?, listener: (actionName: string, pathArray: Common.PathTable, ...any) -> ()) -> Connection,
 	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
 
 	-- Private

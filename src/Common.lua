@@ -17,7 +17,7 @@ export type PathTable = {string | number}
 export type PathIndex = string | number
 
 local Common = {}
-local TOP_LEVEL_LISTENERS = {}
+local SIGNAL_LIST = {}
 
 
 local function getPathTable(path: Path): PathTable
@@ -121,16 +121,17 @@ end
 
 local function fireReplicaSignal(self: any, signalName: string, pathTable: PathTable?, ...: any): ()
 	if self._listeners ~= nil then
-		local pointer
-		if pathTable == nil or #pathTable == 0 then
-			pointer = self._listeners[TOP_LEVEL_LISTENERS]
-		else
+		local pointer = self._listeners
+		if pathTable ~= nil then
 			pointer = getTableFromPathTable(self._listeners, pathTable, false)
 		end
 		if pointer then
-			local signal = pointer[signalName]
-			if signal ~= nil then
-				signal:Fire(...)
+			local signalList = pointer[SIGNAL_LIST]
+			if signalList then
+				local signal = signalList[signalName]
+				if signal ~= nil then
+					signal:Fire(...)
+				end
 			end
 		end
 	end
@@ -142,7 +143,7 @@ function Common.assertActive(self: any): ()
 	end
 end
 
-function Common.connectReplicaSignal(self: any, signalName: string, path: Path, listener: (...any) -> ())
+function Common.connectReplicaSignal(self: any, signalName: string, path: Path?, listener: (...any) -> ())
 	Common.assertActive(self)
 	local listeners = self._listeners
 	if listeners == nil then
@@ -150,16 +151,17 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path, 
 		self._listeners = listeners
 	end
 
-	local signalTable
-	if path == "" or (type(path) == "table" and #path == 0) then
-		signalTable = listeners[TOP_LEVEL_LISTENERS]
-		if signalTable == nil then
-			signalTable = {}
-			listeners[TOP_LEVEL_LISTENERS] = signalTable
-		end
-	else
+	local pointer = listeners
+	
+	if path ~= nil then
 		local pathTable = getPathTable(path)
-		signalTable = getTableFromPathTableCreate(listeners, pathTable)
+		pointer = getTableFromPathTableCreate(listeners, pathTable)
+	end
+
+	local signalTable = pointer[SIGNAL_LIST]
+	if signalTable == nil then
+		signalTable = {}
+		pointer[SIGNAL_LIST] = signalTable
 	end
 
 	local signal = signalTable[signalName]
@@ -175,11 +177,9 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path, 
 				if #signal:GetConnections() == 0 then
 					signal:Destroy()
 					signalTable[signalName] = nil
-					if signalTable ~= listeners[TOP_LEVEL_LISTENERS] then
-						cleanSignalTable(listeners, getPathTable(path), signalTable)
-					elseif next(signalTable) == nil then
-						listeners[TOP_LEVEL_LISTENERS] = nil
-					end
+					local pathTable = path ~= nil and getPathTable(path) or {}
+					table.insert(pathTable, SIGNAL_LIST)
+					cleanSignalTable(listeners, pathTable, signalTable)
 					if next(listeners) == nil then
 						self._listeners = nil
 					end
