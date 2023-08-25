@@ -4,9 +4,6 @@
 	(discord: jcl.)
 ]]
 local RunService = game:GetService("RunService")
-if RunService:IsClient() then
-	return {}
-end
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local Comm = require(script.Parent.Parent.Comm)
@@ -14,14 +11,14 @@ local Signal = require(script.Parent.Parent.Signal)
 local Trove = require(script.Parent.Parent.Trove)
 local Common = require(script.Parent.Common)
 
-export type ReplicationFilterName = "All" | "Include" | "Exclude"
-export type ReplicationFilter = number
+export type FilterName = "All" | "Include" | "Exclude"
+export type Filter = number
 
 export type ReplicaProps = {
 	Token: ReplicaToken,
 	Tags: { [string]: any }?, -- Default: {}
 	Data: { [string]: any }?, -- Default: {}
-	ReplicationFilter: ReplicationFilterName?, -- Default: "All"
+	Filter: FilterName?, -- Default: "All"
 	FilterList: { [Player]: true }?, -- Default: {}
 	Parent: Replica?, -- Default: nil
 	-- WriteLib: any, -- ModuleScript
@@ -30,32 +27,31 @@ export type ReplicaProps = {
 export type Signal = typeof(Signal.new(...))
 
 -- ServerComm
-local comm = Comm.ServerComm.new(script.Parent, "ReplicaService_Comm")
+local comm
 -- Receive init data signal
-local requestData = comm:CreateSignal("RequestData") -- (player: Player) -> ()
+local requestData
 -- Create Comm RemoteSignals
-local rep_Create = comm:CreateSignal("Create") -- (id: string, token: string, tags: {[string]: any}, data: {[string]: any}, child_replica_data: {}, parentId: string?)
-local rep_SetValue = comm:CreateSignal("SetValue") -- (id: string, path: string, value: any)
-local rep_SetValues = comm:CreateSignal("SetValues") -- (id: string, path: string, values: {[string]: any})
-local rep_ArrayInsert = comm:CreateSignal("ArrayInsert") -- (id: string, path: string, index: number, value: any)
-local rep_ArraySet = comm:CreateSignal("ArraySet") -- (id: string, path: string, index: number, value: any)
-local rep_ArrayRemove = comm:CreateSignal("ArrayRemove") -- (id: string, path: string, index: number)
--- local rep_Write = comm:CreateSignal("Write")
-local rep_SetParent = comm:CreateSignal("SetParent") -- (id: string, parentId: string)
-local rep_Destroy = comm:CreateSignal("Destroy") -- (id: string)
+local rep_Create
+local rep_SetValue
+local rep_SetValues
+local rep_ArrayInsert
+local rep_ArraySet
+local rep_ArrayRemove
+-- local rep_Write
+local rep_SetParent
+local rep_Destroy
 --
-local activePlayers: { [Player]: true } = {}
-local replicaTokens: { [string]: ReplicaToken } = {}
-local replicas: { [string]: Replica } = {}
-local REPLICATION_FILTER = {
-	All = 1,
-	Include = 2,
-	Exclude = 3,
+local activePlayers: { [Player]: true }
+local replicaTokens: { [string]: ReplicaToken }
+local replicas: { [string]: Replica }
+local FILTER: {
+	All: number,
+	Include: number,
+	Exclude: number,
 }
-
 -- Signals
-local onActivePlayerAdded = Signal.new() -- (player: Player) -> ()
-local onActivePlayerRemoved = Signal.new() -- (player: Player) -> ()
+local onActivePlayerAdded
+local onActivePlayerRemoved
 
 --[=[
 	@class Replica
@@ -79,8 +75,8 @@ local identify = Common.identify
 
 
 local function fireRemoteSignalForReplica(self: Replica, signal: any, inclusion: { [Player]: boolean }?, ...: any): ()
-	local replicationFilter = self:GetReplicationFilter()
-	if replicationFilter == REPLICATION_FILTER.All then
+	local replicationFilter = self:GetFilter()
+	if replicationFilter == FILTER.All then
 		signal:FireFilter(function(player: Player)
 			if not activePlayers[player] then
 				return false
@@ -95,10 +91,10 @@ local function fireRemoteSignalForReplica(self: Replica, signal: any, inclusion:
 			if inclusion ~= nil and inclusion[player] ~= nil then
 				return inclusion[player]
 			end
-			if replicationFilter == REPLICATION_FILTER.Include then
-				return self:GetReplicationFilterList()[player] ~= nil
-			elseif replicationFilter == REPLICATION_FILTER.Exclude then
-				return self:GetReplicationFilterList()[player] == nil
+			if replicationFilter == FILTER.Include then
+				return self:GetFilterList()[player] ~= nil
+			elseif replicationFilter == FILTER.Exclude then
+				return self:GetFilterList()[player] == nil
 			end
 			return false
 		end, self.Id, ...)
@@ -126,15 +122,15 @@ local function destroyFor(self: Replica, player: Player): ()
 end
 
 local function shouldReplicateForPlayer(self: Replica, player: Player): boolean
-	local filter = self:GetReplicationFilter()
-	local filterList = self:GetReplicationFilterList()
-	if filter == REPLICATION_FILTER.All then
+	local filter = self:GetFilter()
+	local filterList = self:GetFilterList()
+	if filter == FILTER.All then
 		return true
 	else
 		if filterList[player] ~= nil then
-			return filter == REPLICATION_FILTER.Include
+			return filter == FILTER.Include
 		else
-			return filter == REPLICATION_FILTER.Exclude
+			return filter == FILTER.Exclude
 		end
 	end
 end
@@ -142,41 +138,41 @@ end
 local function updateReplicationForPlayer(
 	self: Replica,
 	player: Player,
-	oldFilter: ReplicationFilter,
+	oldFilter: Filter,
 	oldPlayers: { [Player]: true },
-	newFilter: ReplicationFilter,
+	newFilter: Filter,
 	newPlayers: { [Player]: true }
 ): boolean? -- Created = true, Destroyed = false, None = nil
 	local change: boolean? = nil
 
-	if oldFilter == REPLICATION_FILTER.All then
+	if oldFilter == FILTER.All then
 		if
-			(newFilter == REPLICATION_FILTER.Include and newPlayers[player] == nil)
-			or (newFilter == REPLICATION_FILTER.Exclude and newPlayers[player] ~= nil)
+			(newFilter == FILTER.Include and newPlayers[player] == nil)
+			or (newFilter == FILTER.Exclude and newPlayers[player] ~= nil)
 		then
 			change = false
 		end
-	elseif newFilter == REPLICATION_FILTER.All then
-		if oldFilter == REPLICATION_FILTER.Include then
+	elseif newFilter == FILTER.All then
+		if oldFilter == FILTER.Include then
 			if oldPlayers[player] == nil then
 				change = true
 			end
-		elseif oldFilter == REPLICATION_FILTER.Exclude then
+		elseif oldFilter == FILTER.Exclude then
 			if oldPlayers[player] ~= nil then
 				change = true
 			end
 		end
 	elseif newFilter == oldFilter then
 		if oldPlayers[player] == nil and newPlayers[player] ~= nil then
-			change = oldFilter == REPLICATION_FILTER.Include
+			change = oldFilter == FILTER.Include
 		elseif oldPlayers[player] ~= nil and newPlayers[player] == nil then
-			change = oldFilter == REPLICATION_FILTER.Exclude
+			change = oldFilter == FILTER.Exclude
 		end
 	else
 		if oldPlayers[player] ~= nil and newPlayers[player] ~= nil then
-			change = oldFilter == REPLICATION_FILTER.Exclude
+			change = oldFilter == FILTER.Exclude
 		elseif oldPlayers[player] == nil and newPlayers[player] == nil then
-			change = oldFilter == REPLICATION_FILTER.Include
+			change = oldFilter == FILTER.Include
 		end
 	end
 	if change == true then
@@ -189,14 +185,14 @@ end
 
 local function updateReplication(
 	self: Replica,
-	oldFilter: ReplicationFilter,
+	oldFilter: Filter,
 	oldPlayers: { [Player]: true },
-	newFilter: ReplicationFilter,
+	newFilter: Filter,
 	newPlayers: { [Player]: true }
 ): { [Player]: boolean }
 	local changeList = {}
 	if self._parent == nil then
-		self._replicationFilter = newFilter
+		self._filter = newFilter
 		self._filterList = newPlayers
 	end
 	for player in pairs(activePlayers) do
@@ -265,10 +261,10 @@ local function removeChild(self: Replica, child: Replica): ()
 end
 
 local function setParent(self: Replica, parent: Replica): ()
-	local oldFilter = self:GetReplicationFilter()
-	local oldPlayers = self:GetReplicationFilterList()
-	local newFilter = parent:GetReplicationFilter()
-	local newPlayers = parent:GetReplicationFilterList()
+	local oldFilter = self:GetFilter()
+	local oldPlayers = self:GetFilterList()
+	local newFilter = parent:GetFilter()
+	local newPlayers = parent:GetFilterList()
 	-- remove from old parent
 	removeChild(self._parent, self)
 	-- add to new parent
@@ -295,7 +291,7 @@ local function addToFilter(self: Replica, player: Player): ()
 	if self._parent ~= nil then
 		error(`Cannot add to filter list of non-root Replica`)
 	end
-	if self._replicationFilter == REPLICATION_FILTER.All or self._filterList[player] ~= nil then
+	if self._filter == FILTER.All or self._filterList[player] ~= nil then
 		return
 	end
 	self._filterList[player] = true
@@ -310,7 +306,7 @@ local function removeFromFilter(self: Replica, player: Player): ()
 	if self._parent ~= nil then
 		error(`Cannot remove from filter list of non-root Replica`)
 	end
-	if self._replicationFilter == REPLICATION_FILTER.All or self._filterList[player] == nil then
+	if self._filter == FILTER.All or self._filterList[player] == nil then
 		return
 	end
 	self._filterList[player] = nil
@@ -354,10 +350,10 @@ end
 function Replica.new(props: ReplicaProps): Replica
 	local trove = Trove.new()
 
-	local replicationFilter = REPLICATION_FILTER[props.ReplicationFilter or "All"]
+	local replicationFilter = FILTER[props.Filter or "All"]
 	local filterList = props.FilterList
 
-	if props.Parent == nil and (filterList == nil or replicationFilter == REPLICATION_FILTER.All) then
+	if props.Parent == nil and (filterList == nil or replicationFilter == FILTER.All) then
 		filterList = {}
 	end
 
@@ -371,7 +367,7 @@ function Replica.new(props: ReplicaProps): Replica
 		Data = props.Data or {},
 		_parent = props.Parent,
 		-- Replication
-		_replicationFilter = props.Parent == nil and replicationFilter or nil,
+		_filter = props.Parent == nil and replicationFilter or nil,
 		_filterList = props.Parent == nil and filterList or nil,
 		_child_replica_data = props.Parent == nil and {} or nil,
 		_children = {},
@@ -420,12 +416,12 @@ function Replica:GetToken(): ReplicaToken
 	return self._token
 end
 
-function Replica:GetReplicationFilter(): ReplicationFilter
-	return self._replicationFilter or self._parent:GetReplicationFilter()
+function Replica:GetFilter(): Filter
+	return self._filter or self._parent:GetFilter()
 end
 
-function Replica:GetReplicationFilterList(): { [Player]: true }
-	return self._filterList or self._parent:GetReplicationFilterList()
+function Replica:GetFilterList(): { [Player]: true }
+	return self._filterList or self._parent:GetFilterList()
 end
 
 function Replica:_GetChildReplicaData(): { [string]: any }
@@ -535,7 +531,7 @@ function Replica:SetParent(parent: Replica): ()
 end
 
 function Replica:SetReplication(settings: {
-	filter: ReplicationFilter?,
+	filter: Filter?,
 	players: { [Player]: true }?,
 }): ()
 	if self._parent ~= nil then
@@ -544,14 +540,14 @@ function Replica:SetReplication(settings: {
 	if settings.filter == nil and settings.players == nil then
 		return
 	end
-	local newFilter = settings.filter and REPLICATION_FILTER[settings.filter] or self._replicationFilter
+	local newFilter = settings.filter and FILTER[settings.filter] or self._filter
 	local newFilterList = settings.players or self._filterList
-	if newFilter == REPLICATION_FILTER.All then
+	if newFilter == FILTER.All then
 		newFilterList = {}
 	end
 	updateReplication(
 		self,
-		self._replicationFilter,
+		self._filter,
 		self._filterList :: { [Player]: true },
 		newFilter,
 		newFilterList
@@ -579,10 +575,16 @@ end
 local ReplicaService = {}
 
 function ReplicaService:ActivePlayers()
+	if not RunService:IsServer() then
+		error("ReplicaService:ActivePlayers() can only be called on the server")
+	end
 	return activePlayers
 end
 
 function ReplicaService:ObserveActivePlayers(observer: (player: Player) -> ())
+	if not RunService:IsServer() then
+		error("ReplicaService:ObserveActivePlayers() can only be called on the server")
+	end
 	for player in pairs(activePlayers) do
 		task.spawn(observer, player)
 	end
@@ -590,10 +592,16 @@ function ReplicaService:ObserveActivePlayers(observer: (player: Player) -> ())
 end
 
 function ReplicaService:OnActivePlayerRemoved(listener: (player: Player) -> ())
+	if not RunService:IsServer() then
+		error("ReplicaService:OnActivePlayerRemoved() can only be called on the server")
+	end
 	return onActivePlayerRemoved:Connect(listener)
 end
 
 function ReplicaService:RegisterToken(name: string): ReplicaToken
+	if not RunService:IsServer() then
+		error("ReplicaService:RegisterToken() can only be called on the server")
+	end
 	assert(replicaTokens[name] == nil, `ReplicaToken "{name}" already exists!`)
 	local token = setmetatable({
 		__ClassName = "ReplicaToken",
@@ -609,14 +617,47 @@ end
 export type ReplicaToken = typeof(ReplicaService:RegisterToken(...))
 
 function ReplicaService:NewReplica(props: ReplicaProps)
+	if not RunService:IsServer() then
+		error("ReplicaService:NewReplica() can only be called on the server")
+	end
 	return Replica.new(props)
 end
 
-ReplicaService.Temporary = Replica.new({
-	Token = ReplicaService:RegisterToken(HttpService:GenerateGUID(false)),
-	ReplicationFilter = "Include",
-	FilterList = {},
-})
-Players.PlayerRemoving:Connect(onPlayerRemoving)
-requestData:Connect(onPlayerRequestData)
+if RunService:IsServer() then
+	-- ServerComm
+	comm = Comm.ServerComm.new(script.Parent, "ReplicaService_Comm")
+	-- Receive init data signal
+	requestData = comm:CreateSignal("RequestData") -- (player: Player) -> ()
+	-- Create Comm RemoteSignals
+	rep_Create = comm:CreateSignal("Create") -- (id: string, token: string, tags: {[string]: any}, data: {[string]: any}, child_replica_data: {}, parentId: string?)
+	rep_SetValue = comm:CreateSignal("SetValue") -- (id: string, path: string, value: any)
+	rep_SetValues = comm:CreateSignal("SetValues") -- (id: string, path: string, values: {[string]: any})
+	rep_ArrayInsert = comm:CreateSignal("ArrayInsert") -- (id: string, path: string, index: number, value: any)
+	rep_ArraySet = comm:CreateSignal("ArraySet") -- (id: string, path: string, index: number, value: any)
+	rep_ArrayRemove = comm:CreateSignal("ArrayRemove") -- (id: string, path: string, index: number)
+	-- rep_Write = comm:CreateSignal("Write")
+	rep_SetParent = comm:CreateSignal("SetParent") -- (id: string, parentId: string)
+	rep_Destroy = comm:CreateSignal("Destroy") -- (id: string)
+	--
+	activePlayers = {}
+	replicaTokens = {}
+	replicas = {}
+	FILTER = {
+		All = 1,
+		Include = 2,
+		Exclude = 3,
+	}
+
+	-- Signals
+	onActivePlayerAdded = Signal.new() -- (player: Player) -> ()
+	onActivePlayerRemoved = Signal.new() -- (player: Player) -> ()
+	--
+	ReplicaService.Temporary = Replica.new({
+		Token = ReplicaService:RegisterToken(HttpService:GenerateGUID(false)),
+		Filter = "Include",
+		FilterList = {},
+	})
+	Players.PlayerRemoving:Connect(onPlayerRemoving)
+	requestData:Connect(onPlayerRequestData)
+end
 return ReplicaService

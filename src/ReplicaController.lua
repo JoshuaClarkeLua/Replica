@@ -4,9 +4,6 @@
 	(discord: jcl.)
 ]]
 local RunService = game:GetService("RunService")
-if RunService:IsServer() then
-	return {}
-end
 local Comm = require(script.Parent.Parent.Comm)
 local Signal = require(script.Parent.Parent.Signal)
 local Trove = require(script.Parent.Parent.Trove)
@@ -15,24 +12,24 @@ local Common = require(script.Parent.Common)
 type Signal = typeof(Signal.new(...))
 
 -- ServerComm
-local comm = Comm.ClientComm.new(script.Parent, false, "ReplicaService_Comm")
+local comm
 -- Receive init data signal
-local requestData = comm:GetSignal("RequestData") -- (player: Player) -> ()
+local requestData
 -- Create Comm RemoteSignals
-local rep_Create = comm:GetSignal("Create") -- (id: string, token: string, tags: {[string]: any}, data: {[string]: any}, child_replica_data: {}, parentId: string?)
-local rep_SetValue = comm:GetSignal("SetValue") -- (id: string, path: string, value: any)
-local rep_SetValues = comm:GetSignal("SetValues") -- (id: string, path: string, values: {[string]: any})
-local rep_ArrayInsert = comm:GetSignal("ArrayInsert") -- (id: string, path: string, index: number, value: any)
-local rep_ArraySet = comm:GetSignal("ArraySet") -- (id: string, path: string, index: number, value: any)
-local rep_ArrayRemove = comm:GetSignal("ArrayRemove") -- (id: string, path: string, index: number)
--- local rep_Write = comm:GetSignal("Write")
-local rep_SetParent = comm:GetSignal("SetParent") -- (id: string, parentId: string)
-local rep_Destroy = comm:GetSignal("Destroy") -- (id: string)
+local rep_Create
+local rep_SetValue
+local rep_SetValues
+local rep_ArrayInsert
+local rep_ArraySet
+local rep_ArrayRemove
+-- local rep_Write
+local rep_SetParent
+local rep_Destroy
 --
-local replicas: { [string]: Replica } = {}
-local onInitDataReceived = Signal.new() -- () -> ()
-local onReplicaCreated = Signal.new() -- (replica: Replica) -> ()
-local newReplicaSignals = {}
+local replicas: { [string]: Replica }
+local onInitDataReceived
+local onReplicaCreated
+local newReplicaSignals
 
 --[=[
 	@class Replica
@@ -231,6 +228,10 @@ function Replica:GetParent(): Replica?
 	return replicas[id]
 end
 
+function Replica:GetChildren(): {[Replica]: true}
+	return self._children
+end
+
 function Replica:OnDestroy(listener: (replica: Replica) -> ())
 	assertActive(self)
 	return self._OnDestroy:Connect(listener)
@@ -328,6 +329,9 @@ local function getNewReplicaSignalForToken(token: string): Signal
 end
 
 function ReplicaController:RequestData(): ()
+	if not RunService:IsClient() then
+		error("ReplicaController:RequestData() can only be called on the client!")
+	end
 	local conn
 	conn = requestData:Connect(function(data)
 		for id, rootReplica: {any} in pairs(data) do
@@ -340,14 +344,23 @@ function ReplicaController:RequestData(): ()
 end
 
 function ReplicaController:OnNewReplica(listener: (replica: Replica) -> ())
+	if not RunService:IsClient() then
+		error("ReplicaController:OnNewReplica() can only be called on the client!")
+	end
 	return onReplicaCreated:Connect(listener)
 end
 
 function ReplicaController:OnNewReplicaWithToken(token: string, listener: (replica: Replica) -> ())
+	if not RunService:IsClient() then
+		error("ReplicaController:OnNewReplicaWithToken() can only be called on the client!")
+	end
 	return getNewReplicaSignalForToken(token):Connect(listener)
 end
 
 function ReplicaController:OnInitialDataReceived(listener: () -> ()): any
+	if not RunService:IsClient() then
+		error("ReplicaController:OnInitialDataReceived() can only be called on the client!")
+	end
 	if ReplicaController.InitialDataReceived then
 		task.spawn(listener)
 	else
@@ -357,16 +370,40 @@ function ReplicaController:OnInitialDataReceived(listener: () -> ()): any
 end
 
 function ReplicaController:GetReplicaById(id: string): Replica?
+	if not RunService:IsClient() then
+		error("ReplicaController:GetReplicaById() can only be called on the client!")
+	end
 	return replicas[id]
 end
 
-rep_Create:Connect(Replica.new)
-rep_SetValue:Connect(onSetValue)
-rep_SetValues:Connect(onSetValues)
-rep_ArrayInsert:Connect(onArrayInsert)
-rep_ArraySet:Connect(onArraySet)
-rep_ArrayRemove:Connect(onArrayRemove)
--- rep_Write:Connect(onWrite)
-rep_SetParent:Connect(onSetParent)
-rep_Destroy:Connect(onDestroy)
+if RunService:IsClient() then
+	replicas = {}
+	onInitDataReceived = Signal.new() -- () -> ()
+	onReplicaCreated = Signal.new() -- (replica: Replica) -> ()
+	newReplicaSignals = {}
+	--
+	comm = Comm.ClientComm.new(script.Parent, false, "ReplicaService_Comm")
+	-- Receive init data signal
+	requestData = comm:GetSignal("RequestData") -- (player: Player) -> ()
+	-- Create Comm RemoteSignals
+	rep_Create = comm:GetSignal("Create") -- (id: string, token: string, tags: {[string]: any}, data: {[string]: any}, child_replica_data: {}, parentId: string?)
+	rep_SetValue = comm:GetSignal("SetValue") -- (id: string, path: string, value: any)
+	rep_SetValues = comm:GetSignal("SetValues") -- (id: string, path: string, values: {[string]: any})
+	rep_ArrayInsert = comm:GetSignal("ArrayInsert") -- (id: string, path: string, index: number, value: any)
+	rep_ArraySet = comm:GetSignal("ArraySet") -- (id: string, path: string, index: number, value: any)
+	rep_ArrayRemove = comm:GetSignal("ArrayRemove") -- (id: string, path: string, index: number)
+	-- rep_Write = comm:GetSignal("Write")
+	rep_SetParent = comm:GetSignal("SetParent") -- (id: string, parentId: string)
+	rep_Destroy = comm:GetSignal("Destroy") -- (id: string)
+	--
+	rep_Create:Connect(Replica.new)
+	rep_SetValue:Connect(onSetValue)
+	rep_SetValues:Connect(onSetValues)
+	rep_ArrayInsert:Connect(onArrayInsert)
+	rep_ArraySet:Connect(onArraySet)
+	rep_ArrayRemove:Connect(onArrayRemove)
+	-- rep_Write:Connect(onWrite)
+	rep_SetParent:Connect(onSetParent)
+	rep_Destroy:Connect(onDestroy)
+end
 return ReplicaController
