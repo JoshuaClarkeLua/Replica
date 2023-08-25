@@ -62,7 +62,6 @@ local Replica = {}
 Replica.__index = Replica
 
 
-local assertActive = Common.assertActive
 local connectReplicaSignal = Common.connectReplicaSignal
 local onSetValue = Common.onSetValue
 local onSetValues = Common.onSetValues
@@ -432,7 +431,7 @@ function Replica:SetValue(path: Common.Path, value: any, inclusion: { [Player]: 
 	fireRemoteSignalForReplica(self, rep_SetValue, inclusion, path, value)
 end
 
-function Replica:SetValues(path: Common.Path, values: { [string]: any }, inclusion: { [Player]: boolean }?): ()
+function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: { [Player]: boolean }?): ()
 	onSetValues(self, path, values)
 	fireRemoteSignalForReplica(self, rep_SetValues, inclusion, path, values)
 end
@@ -456,7 +455,7 @@ function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> (
 	return connectReplicaSignal(self, "_OnChange", path, listener)
 end
 
-function Replica:OnNewKey(path: Common.Path, listener: (keyOrIndex: string | number, value: any) -> ())
+function Replica:OnNewKey(path: Common.Path, listener: (key: any, value: any) -> ())
 	return connectReplicaSignal(self, "_OnNewKey", path, listener)
 end
 
@@ -472,16 +471,12 @@ function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, valu
 	return connectReplicaSignal(self, "_OnArrayRemove", path, listener)
 end
 
-function Replica:OnRawChange(path: Common.Path, listener: (actionName: string, pathArray: { string }, ...any) -> ())
+function Replica:OnRawChange(path: Common.Path, listener: (actionName: string, pathTable: Common.PathTable, ...any) -> ())
 	return connectReplicaSignal(self, "_OnRawChange", path, listener)
 end
 
 function Replica:OnChildAdded(listener: (child: Replica) -> ())
 	return connectReplicaSignal(self, "_OnChildAdded", "", listener)
-end
-
-function Replica:ListenToRaw(listener: (action: string, pathTable: Common.PathTable, value: any) -> ())
-	return connectReplicaSignal(self, "_ListenToRaw", "", listener)
 end
 
 function Replica:OnDestroy(listener: (replica: Replica) -> ())

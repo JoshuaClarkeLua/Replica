@@ -1,5 +1,4 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Signal = require(ReplicatedStorage.Packages.Signal)
+local Signal = require(script.Parent.Parent.Signal)
 
 -- type Replica = {
 -- 	Id: string,
@@ -21,27 +20,32 @@ local Common = {}
 local TOP_LEVEL_LISTENERS = {}
 
 
-function Common.getPathTable(path: Path): PathTable
+local function getPathTable(path: Path): PathTable
 	if type(path) == "table" then
 		return table.clone(path)
 	end
 	return string.split(path, ".")
 end
 
-function Common.getPathTablePointer(data: { [any]: any }, pathTable: PathTable, create: boolean?): ({ [PathIndex]: any }?, PathIndex?)
+local function getPathTablePointer(data: { [any]: any }, pathTable: PathTable, create: boolean, newKey: (key: PathIndex, value: any) -> ()?): ({ [PathIndex]: any }?, PathIndex?, number?)
 	local pointer = data
-	local index = table.remove(pathTable, #pathTable)
+	local index = pathTable[#pathTable]
 
+	local newKeyIndex: number
 	if #pathTable ~= 0 then
-		for _, key in ipairs(pathTable) do
+		for i = 1, #pathTable - 1 do
 			if type(pointer) ~= "table" then
 				error(`Invalid path: Cannot index non-table value "{pointer}"`)
 			end
+			local key = pathTable[i]
 			local newPointer = pointer[key]
 			if newPointer == nil then
 				if create ~= false then
 					newPointer = {}
 					pointer[key] = newPointer
+					if newKeyIndex == nil then
+						newKeyIndex = i
+					end
 				else
 					return
 				end
@@ -50,38 +54,39 @@ function Common.getPathTablePointer(data: { [any]: any }, pathTable: PathTable, 
 		end
 	end
 
-	return pointer, index
+	return pointer, index, newKeyIndex
 end
 
-function Common.getPathTablePointerCreate(data: { [any]: any }, pathTable: PathTable): ({ [PathIndex]: any }, PathIndex)
-	local pointer, index = Common.getPathTablePointer(data, pathTable, true)
-	return pointer :: {[any]: any}, index :: PathIndex
-end
-
---[=[
-	@within Replcia
-	@function getPathPointer
-
-	Returns the pointer (table) in which the value is stored in
-	and the final index
-
-	@param data: table - The table to get the value from
-	@param path: string - The path to get the value with
-
-	@return pointer: table - The table containing the value
-	@return index: string - The final index
-]=]
-function Common.getPathPointer(data: { [any]: any }, path: Path): ({ [PathIndex]: any }, PathIndex)
-	return Common.getPathTablePointerCreate(data, Common.getPathTable(path))
-end
-
-function Common.assertActive(self: any): ()
-	if not self:IsActive() then
-		error(`Replica has already been destroyed`)
+local function getTableFromPathTable(data: {[any]: any}, pathTable: PathTable, create: boolean?): {[any]: any}?
+	local pointer = data
+	for _, key in ipairs(pathTable) do
+		if type(pointer) ~= "table" then
+			error(`Invalid path: Cannot index non-table value "{pointer}"`)
+		end
+		local newPointer = pointer[key]
+		if newPointer == nil then
+			if create ~= false then
+				newPointer = {}
+				pointer[key] = newPointer
+			else
+				return
+			end
+		end
+		pointer = pointer[key]
 	end
+	return pointer
 end
 
-function Common.cleanSignalTable(signals: { [PathIndex]: any }, pathTable: PathTable, signalTable: {[PathIndex]: any}): ()
+local function getTableFromPathTableCreate(data: {[any]: any}, pathTable: PathTable): {[any]: any}
+	return getTableFromPathTable(data, pathTable, true) :: {[any]: any}
+end
+
+local function getPathTablePointerCreate(data: { [any]: any }, pathTable: PathTable): ({ [PathIndex]: any }, PathIndex, number?)
+	local pointer, index, newKeyIndex = getPathTablePointer(data, pathTable, true)
+	return pointer :: {[any]: any}, index :: PathIndex, newKeyIndex
+end
+
+local function cleanSignalTable(signals: { [PathIndex]: any }, pathTable: PathTable, signalTable: {[PathIndex]: any}): ()
 	if next(signalTable) ~= nil then
 		return
 	end
@@ -114,6 +119,29 @@ function Common.cleanSignalTable(signals: { [PathIndex]: any }, pathTable: PathT
 	end
 end
 
+local function fireReplicaSignal(self: any, signalName: string, pathTable: PathTable?, ...: any): ()
+	if self._listeners ~= nil then
+		local pointer
+		if pathTable == nil or #pathTable == 0 then
+			pointer = self._listeners[TOP_LEVEL_LISTENERS]
+		else
+			pointer = getTableFromPathTable(self._listeners, pathTable, false)
+		end
+		if pointer then
+			local signal = pointer[signalName]
+			if signal ~= nil then
+				signal:Fire(...)
+			end
+		end
+	end
+end
+
+function Common.assertActive(self: any): ()
+	if not self:IsActive() then
+		error(`Replica has already been destroyed`)
+	end
+end
+
 function Common.connectReplicaSignal(self: any, signalName: string, path: Path, listener: (...any) -> ())
 	Common.assertActive(self)
 	local listeners = self._listeners
@@ -130,9 +158,8 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path, 
 			listeners[TOP_LEVEL_LISTENERS] = signalTable
 		end
 	else
-		local pathTable = Common.getPathTable(path)
-		table.insert(pathTable, signalName)
-		signalTable = Common.getPathTablePointerCreate(listeners, pathTable)
+		local pathTable = getPathTable(path)
+		signalTable = getTableFromPathTableCreate(listeners, pathTable)
 	end
 
 	local signal = signalTable[signalName]
@@ -149,7 +176,7 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path, 
 					signal:Destroy()
 					signalTable[signalName] = nil
 					if signalTable ~= listeners[TOP_LEVEL_LISTENERS] then
-						Common.cleanSignalTable(listeners, Common.getPathTable(path), signalTable)
+						cleanSignalTable(listeners, getPathTable(path), signalTable)
 					elseif next(signalTable) == nil then
 						listeners[TOP_LEVEL_LISTENERS] = nil
 					end
@@ -165,81 +192,70 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path, 
 	return signal:Connect(listener)
 end
 
-function Common.fireReplicaSignal(self: any, signalName: string, pathTable: PathTable?, index: PathIndex?, ...: any): ()
-	if self._listeners ~= nil then
-		local pointer
-		if pathTable == nil or (#pathTable == 0 and index == nil) then
-			pointer = self._listeners[TOP_LEVEL_LISTENERS]
-		else
-			table.insert(pathTable, index)
-			table.insert(pathTable, signalName)
-			pointer = Common.getPathTablePointer(self._listeners, pathTable, false)
-		end
-		if pointer then
-			local signal = pointer[signalName]
-			if signal ~= nil then
-				signal:Fire(...)
-			end
-		end
-	end
-end
-
-function Common._onSetValue(self: any, pathTable: PathTable, pointer:{[PathIndex]: any}, index: PathIndex, value: any): ()
+function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any): ()
 	local old = pointer[index]
 	pointer[index] = value
 	if old == nil then
-		Common.fireReplicaSignal(self, "_OnNewKey", pathTable, nil, index, value)
+		if newKeyIndex ~= nil and newKeyIndex > 1 then
+			local _tempPathTable = table.move(pathTable, 1, newKeyIndex - 1, 1, {})
+			for i = newKeyIndex, #pathTable do
+				local newKey = pathTable[i]
+				fireReplicaSignal(self, "_OnNewKey", _tempPathTable, newKey, pointer)
+				table.insert(_tempPathTable, newKey)
+			end
+		end
+		fireReplicaSignal(self, "_OnNewKey", pathTable, index, value)
 	end
 
-	Common.fireReplicaSignal(self, "_OnChange", pathTable, index, value, old)
+	fireReplicaSignal(self, "_OnChange", pathTable, value, old)
 end
 
 function Common.onSetValue(self: any, path: Path, value: any): ()
-	local pathTable = Common.getPathTable(path)
-	local pointer, index = Common.getPathTablePointerCreate(self.Data, pathTable)
-	Common._onSetValue(self, pathTable, pointer, index, value)
-	Common.fireReplicaSignal(self, "_ListenToRaw", pathTable, index, "SetValue", pathTable, value)
+	local pathTable = getPathTable(path)
+	local pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, pathTable)
+	Common._onSetValue(self, pathTable, newKeyIndex, pointer, index, value)
+	fireReplicaSignal(self, "_OnRawChange", pathTable, "SetValue", pathTable, value)
 end
 
-function Common.onSetValues(self: any, path: Path, values: { [string]: any }): ()
-	local pathTable = Common.getPathTable(path)
-	local pointer, index = Common.getPathTablePointerCreate(self.Data, pathTable)
+function Common.onSetValues(self: any, path: Path, values: { [PathIndex]: any }): ()
+	local pathTable = getPathTable(path)
+	local pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, pathTable)
 	pathTable[#pathTable + 1] = index
 	for key, value in pairs(values) do
-		Common._onSetValue(self, pathTable, pointer[index], key, value)
+		Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, value)
 	end
-	Common.fireReplicaSignal(self, "_ListenToRaw", pathTable, index, "SetValues", pathTable, values)
+	fireReplicaSignal(self, "_OnRawChange", pathTable, "SetValues", pathTable, values)
 end
 
 function Common.onArrayInsert(self: any, path: Path, index: number?, value: any): number
-	local pathTable = Common.getPathTable(path)
-	local pointer, pointer_index = Common.getPathTablePointerCreate(self.Data, pathTable)
+	local pathTable = getPathTable(path)
+	local pointer, pointer_index = getPathTablePointerCreate(self.Data, pathTable)
 	local _index = index or #pointer[pointer_index] + 1
 	table.insert(pointer[pointer_index], _index, value)
-	Common.fireReplicaSignal(self, "_OnArrayInsert", pathTable, pointer_index, _index, value)
-	Common.fireReplicaSignal(self, "_ListenToRaw", pathTable, pointer_index, "ArrayInsert", pathTable, index, value)
+	fireReplicaSignal(self, "_OnArrayInsert", pathTable, _index, value)
+	fireReplicaSignal(self, "_OnRawChange", pathTable, "ArrayInsert", pathTable, index, value)
 	return _index
 end
 
 function Common.onArraySet(self: any, path: Path, index: number, value: any): ()
-	local pathTable = Common.getPathTable(path)
-	local pointer, _index = Common.getPathTablePointerCreate(self.Data, pathTable)
+	local pathTable = getPathTable(path)
+	local pointer, _index = getPathTablePointerCreate(self.Data, pathTable)
 	pointer[_index][index] = value
-	Common.fireReplicaSignal(self, "_OnArraySet", pathTable, _index, index, value)
-	Common.fireReplicaSignal(self, "_ListenToRaw", pathTable, _index, "ArraySet", pathTable, index, value)
+	fireReplicaSignal(self, "_OnArraySet", pathTable, index, value)
+	fireReplicaSignal(self, "_OnRawChange", pathTable, "ArraySet", pathTable, index, value)
 end
 
 function Common.onArrayRemove(self: any, path: Path, index: number): ()
-	local pathTable = Common.getPathTable(path)
-	local pointer, _index = Common.getPathTablePointerCreate(self.Data, pathTable)
+	local pathTable = getPathTable(path)
+	local pointer, _index = getPathTablePointerCreate(self.Data, pathTable)
 	local old = pointer[_index][index]
 	table.remove(pointer[_index], index)
-	Common.fireReplicaSignal(self, "_OnArrayRemove", pathTable, _index, index, old)
-	Common.fireReplicaSignal(self, "_ListenToRaw", pathTable, _index, "ArrayRemove", pathTable, index, old)
+	fireReplicaSignal(self, "_OnArrayRemove", pathTable, index, old)
+	fireReplicaSignal(self, "_OnRawChange", pathTable, "ArrayRemove", pathTable, index, old)
 end
 
 function Common.onSetParent(self: any, parent): ()
-	Common.fireReplicaSignal(parent, "_OnChildAdded", nil, nil, self)
+	fireReplicaSignal(parent, "_OnChildAdded", nil, self)
 end
 
 function Common.identify(self: any): string

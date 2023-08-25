@@ -40,8 +40,6 @@ local newReplicaSignals
 local Replica = {}
 Replica.__index = Replica
 
-local getPathPointer = Common.getPathPointer
-local assertActive = Common.assertActive
 local connectReplicaSignal = Common.connectReplicaSignal
 local _onSetValue = Common.onSetValue
 local _onSetValues = Common.onSetValues
@@ -152,38 +150,30 @@ function Replica:OnDestroy(listener: (replica: Replica) -> ())
 end
 
 function Replica:SetValue(path: Common.Path, value: any, inclusion: { [Player]: boolean }?): ()
-	local pointer, index = getPathPointer(self.Data, path)
-	pointer[index] = value
+	_onSetValue(self, path)
 end
 
-function Replica:SetValues(path: Common.Path, values: { [string]: any }, inclusion: { [Player]: boolean }?): ()
-	local pointer, index = getPathPointer(self.Data, path)
-	for key, value in pairs(values) do
-		pointer[index][key] = value
-	end
+function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: { [Player]: boolean }?): ()
+	_onSetValues(self, path, values)
 end
 
 function Replica:ArrayInsert(path: Common.Path, value: any, index: number?, inclusion: { [Player]: boolean }?): ()
-	local pointer, pointer_index = getPathPointer(self.Data, path)
-	local _index = index or #pointer[pointer_index] + 1
-	table.insert(pointer[pointer_index], _index, value)
+	_onArrayInsert(self, path)
 end
 
 function Replica:ArraySet(path: Common.Path, index: number, value: any, inclusion: { [Player]: boolean }?): ()
-	local pointer, _index = getPathPointer(self.Data, path)
-	pointer[_index][index] = value
+	_onArraySet(self, path, index)
 end
 
 function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: { [Player]: boolean }?): ()
-	local pointer, _index = getPathPointer(self.Data, path)
-	table.remove(pointer[_index], index)
+	_onArrayRemove(self, path, index)
 end
 
 function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> ())
 	return connectReplicaSignal(self, "_OnChange", path, listener)
 end
 
-function Replica:OnNewKey(path: Common.Path, listener: (keyOrIndex: string | number, value: any) -> ())
+function Replica:OnNewKey(path: Common.Path, listener: (key: any, value: any) -> ())
 	return connectReplicaSignal(self, "_OnNewKey", path, listener)
 end
 
@@ -199,16 +189,12 @@ function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, valu
 	return connectReplicaSignal(self, "_OnArrayRemove", path, listener)
 end
 
-function Replica:OnRawChange(path: Common.Path, listener: (actionName: string, pathArray: { string }, ...any) -> ())
+function Replica:OnRawChange(path: Common.Path, listener: (actionName: string, pathTable: Common.PathTable, ...any) -> ())
 	return connectReplicaSignal(self, "_OnRawChange", path, listener)
 end
 
 function Replica:OnChildAdded(listener: (child: Replica) -> ())
 	return connectReplicaSignal(self, "_OnChildAdded", "", listener)
-end
-
-function Replica:ListenToRaw(listener: (action: string, pathTable: {string}, value: any) -> ())
-	return connectReplicaSignal(self, "_ListenToRaw", "", listener)
 end
 
 function Replica.new(
@@ -311,20 +297,19 @@ export type Replica = {
 	GetChildren: (self: Replica) -> {[Replica]: true},
 	-- Mutator methods
 	SetValue: (self: Replica, path: Common.Path, value: any, inclusion: {[Player]: boolean}?) -> (),
-	SetValues: (self: Replica, path: Common.Path, values: {[string]: any}, inclusion: {[Player]: boolean}?) -> (),
+	SetValues: (self: Replica, path: Common.Path, values: {[Common.PathIndex]: any}, inclusion: {[Player]: boolean}?) -> (),
 	ArrayInsert: (self: Replica, path: Common.Path, value: any, index: number?, inclusion: {[Player]: boolean}?) -> (),
 	ArraySet: (self: Replica, path: Common.Path, index: number, value: any, inclusion: {[Player]: boolean}?) -> (),
 	ArrayRemove: (self: Replica, path: Common.Path, index: number, inclusion: {[Player]: boolean}?) -> (),
 	-- Listener methods
 	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection?,
 	OnChange: (self: Replica, path: Common.Path, listener: (new: any, old: any) -> ()) -> Connection,
-	OnNewKey: (self: Replica, path: Common.Path, listener: (keyOrIndex: string | number, value: any) -> ()) -> Connection,
+	OnNewKey: (self: Replica, path: Common.Path, listener: (key: any, value: any) -> ()) -> Connection,
 	OnArrayInsert: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnArraySet: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnArrayRemove: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
-	OnRawChange: (self: Replica, path: Common.Path, listener: (actionName: string, pathArray: { string }, ...any) -> ()) -> Connection,
+	OnRawChange: (self: Replica, path: Common.Path, listener: (actionName: string, pathArray: Common.PathTable, ...any) -> ()) -> Connection,
 	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
-	ListenToRaw: (self: Replica, listener: (action: string, pathTable: {string}, value: any) -> ()) -> Connection,
 
 	-- Private
 	_token: string,
