@@ -134,8 +134,8 @@ function Replica.new(
 		_token = token,
 		_active = true,
 		-- Data
-		Tags = tags,
-		Data = data,
+		Tags = tags :: { [any]: any },
+		Data = data :: { [any]: any },
 		_parentId = parentId,
 		_children = {},
 		-- Signals
@@ -237,55 +237,55 @@ function Replica:OnDestroy(listener: (replica: Replica) -> ())
 	return self._OnDestroy:Connect(listener)
 end
 
-function Replica:SetValue(path: string, value: any, inclusion: { [Player]: boolean }?): ()
+function Replica:SetValue(path: Common.Path, value: any, inclusion: { [Player]: boolean }?): ()
 	local pointer, index = getPathPointer(self.Data, path)
 	pointer[index] = value
 end
 
-function Replica:SetValues(path: string, values: { [string]: any }, inclusion: { [Player]: boolean }?): ()
+function Replica:SetValues(path: Common.Path, values: { [string]: any }, inclusion: { [Player]: boolean }?): ()
 	local pointer, index = getPathPointer(self.Data, path)
 	for key, value in pairs(values) do
 		pointer[index][key] = value
 	end
 end
 
-function Replica:ArrayInsert(path: string, value: any, index: number?, inclusion: { [Player]: boolean }?): ()
+function Replica:ArrayInsert(path: Common.Path, value: any, index: number?, inclusion: { [Player]: boolean }?): ()
 	local pointer, pointer_index = getPathPointer(self.Data, path)
 	local _index = index or #pointer[pointer_index] + 1
 	table.insert(pointer[pointer_index], _index, value)
 end
 
-function Replica:ArraySet(path: string, index: number, value: any, inclusion: { [Player]: boolean }?): ()
+function Replica:ArraySet(path: Common.Path, index: number, value: any, inclusion: { [Player]: boolean }?): ()
 	local pointer, _index = getPathPointer(self.Data, path)
 	pointer[_index][index] = value
 end
 
-function Replica:ArrayRemove(path: string, index: number, inclusion: { [Player]: boolean }?): ()
+function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: { [Player]: boolean }?): ()
 	local pointer, _index = getPathPointer(self.Data, path)
 	table.remove(pointer[_index], index)
 end
 
-function Replica:OnChange(path: string, listener: (new: any, old: any) -> ())
+function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> ())
 	return connectReplicaSignal(self, "_OnChange", path, listener)
 end
 
-function Replica:OnNewKey(path: string, listener: (keyOrIndex: string | number, value: any) -> ())
+function Replica:OnNewKey(path: Common.Path, listener: (keyOrIndex: string | number, value: any) -> ())
 	return connectReplicaSignal(self, "_OnNewKey", path, listener)
 end
 
-function Replica:OnArrayInsert(path: string, listener: (index: number, value: any) -> ())
+function Replica:OnArrayInsert(path: Common.Path, listener: (index: number, value: any) -> ())
 	return connectReplicaSignal(self, "_OnArrayInsert", path, listener)
 end
 
-function Replica:OnArraySet(path: string, listener: (index: number, value: any) -> ())
+function Replica:OnArraySet(path: Common.Path, listener: (index: number, value: any) -> ())
 	return connectReplicaSignal(self, "_OnArraySet", path, listener)
 end
 
-function Replica:OnArrayRemove(path: string, listener: (index: number, value: any) -> ())
+function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, value: any) -> ())
 	return connectReplicaSignal(self, "_OnArrayRemove", path, listener)
 end
 
-function Replica:OnRawChange(path: string, listener: (actionName: string, pathArray: { string }, ...any) -> ())
+function Replica:OnRawChange(path: Common.Path, listener: (actionName: string, pathArray: { string }, ...any) -> ())
 	return connectReplicaSignal(self, "_OnRawChange", path, listener)
 end
 
@@ -387,11 +387,11 @@ if RunService:IsClient() then
 	requestData = comm:GetSignal("RequestData") -- (player: Player) -> ()
 	-- Create Comm RemoteSignals
 	rep_Create = comm:GetSignal("Create") -- (id: string, token: string, tags: {[string]: any}, data: {[string]: any}, child_replica_data: {}, parentId: string?)
-	rep_SetValue = comm:GetSignal("SetValue") -- (id: string, path: string, value: any)
-	rep_SetValues = comm:GetSignal("SetValues") -- (id: string, path: string, values: {[string]: any})
-	rep_ArrayInsert = comm:GetSignal("ArrayInsert") -- (id: string, path: string, index: number, value: any)
-	rep_ArraySet = comm:GetSignal("ArraySet") -- (id: string, path: string, index: number, value: any)
-	rep_ArrayRemove = comm:GetSignal("ArrayRemove") -- (id: string, path: string, index: number)
+	rep_SetValue = comm:GetSignal("SetValue") -- (id: string, path: Common.Path, value: any)
+	rep_SetValues = comm:GetSignal("SetValues") -- (id: string, path: Common.Path, values: {[string]: any})
+	rep_ArrayInsert = comm:GetSignal("ArrayInsert") -- (id: string, path: Common.Path, index: number, value: any)
+	rep_ArraySet = comm:GetSignal("ArraySet") -- (id: string, path: Common.Path, index: number, value: any)
+	rep_ArrayRemove = comm:GetSignal("ArrayRemove") -- (id: string, path: Common.Path, index: number)
 	-- rep_Write = comm:GetSignal("Write")
 	rep_SetParent = comm:GetSignal("SetParent") -- (id: string, parentId: string)
 	rep_Destroy = comm:GetSignal("Destroy") -- (id: string)
