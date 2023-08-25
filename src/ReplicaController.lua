@@ -10,6 +10,7 @@ local Trove = require(script.Parent.Parent.Trove)
 local Common = require(script.Parent.Common)
 
 type Signal = typeof(Signal.new(...))
+type Connection = typeof(Signal.new():Connect(...))
 
 -- ServerComm
 local comm
@@ -118,96 +119,6 @@ local function onDestroy(id: string): ()
 	self._trove:Destroy()
 end
 
-function Replica.new(
-	id: string,
-	token: string,
-	tags: { [string]: any },
-	data: { [string]: any },
-	child_replica_data: { [string]: any }?,
-	parentId: string?
-): Replica
-	local trove = Trove.new()
-
-	local self = setmetatable({
-		-- Identification
-		Id = id,
-		_token = token,
-		_active = true,
-		-- Data
-		Tags = tags :: { [any]: any },
-		Data = data :: { [any]: any },
-		_parentId = parentId,
-		_children = {},
-		-- Signals
-		_OnDestroy = Signal.new(),
-		-- _listeners = nil,
-		-- Cleanup
-		_trove = trove,
-	}, Replica)
-	replicas[self.Id] = self
-
-	trove:Add(function()
-		self._active = false
-		replicas[self.Id] = nil
-
-		for child in pairs(self._children) do
-			child._trove:Destroy()
-		end
-
-		local parent = self:GetParent()
-		if parent ~= nil then
-			parent._children[self] = nil
-		end
-
-		self._OnDestroy:Fire(self)
-		self._OnDestroy:Destroy()
-	end)
-
-	-- Create children (if any)
-	local waitForParent = {}
-	if child_replica_data ~= nil then
-		for token, parentTable in pairs(child_replica_data) do
-			for parentId, childTable in pairs(parentTable) do
-				if not replicas[parentId] then
-					waitForParent[parentId] = {}
-				end
-				for childId, childData in pairs(childTable) do
-					local child = Replica.new(childId, token, childData[1], childData[2], nil, parentId)
-					if waitForParent[childId] then
-						for _, otherChild in ipairs(waitForParent[childId]) do
-							child._children[otherChild] = true
-						end
-						waitForParent[childId] = nil
-					end
-					if waitForParent[parentId] then
-						table.insert(waitForParent[parentId], child)
-					end
-				end
-			end
-		end
-	end
-	
-	if next(waitForParent) ~= nil  then
-		error(`Failed to construct replica '{id}': Parent replica '{self._parentId}' does not exist!`)
-	end
-
-	-- Add to parent (if any)
-	if self._parentId ~= nil then
-		local parent = self:GetParent()
-		if parent then
-			parent._children[self] = true
-		end
-	end
-
-	onReplicaCreated:Fire(self)
-	if newReplicaSignals[self._token] ~= nil then
-		newReplicaSignals[self._token]:Fire(self)
-	end
-
-	return self
-end
-export type Replica = typeof(Replica.new(...))
-
 function Replica:IsActive(): boolean
 	return self._active == true
 end
@@ -296,6 +207,132 @@ end
 function Replica:ListenToRaw(listener: (action: string, pathTable: {string}, value: any) -> ())
 	return connectReplicaSignal(self, "_ListenToRaw", "", listener)
 end
+
+function Replica.new(
+	id: string,
+	token: string,
+	tags: { [string]: any },
+	data: { [string]: any },
+	child_replica_data: { [string]: any }?,
+	parentId: string?
+): Replica
+	local trove = Trove.new()
+
+	local self = setmetatable({
+		-- Identification
+		Id = id,
+		_token = token,
+		_active = true,
+		-- Data
+		Tags = tags,
+		Data = data,
+		_parentId = parentId,
+		_children = {},
+		-- Signals
+		_OnDestroy = Signal.new(),
+		-- _listeners = nil,
+		-- Cleanup
+		_trove = trove,
+	}, Replica)
+	replicas[self.Id] = self
+
+	trove:Add(function()
+		self._active = false
+		replicas[self.Id] = nil
+
+		for child in pairs(self._children) do
+			child._trove:Destroy()
+		end
+
+		local parent = self:GetParent()
+		if parent ~= nil then
+			parent._children[self] = nil
+		end
+
+		self._OnDestroy:Fire(self)
+		self._OnDestroy:Destroy()
+	end)
+
+	-- Create children (if any)
+	local waitForParent = {}
+	if child_replica_data ~= nil then
+		for token, parentTable in pairs(child_replica_data) do
+			for parentId, childTable in pairs(parentTable) do
+				if not replicas[parentId] then
+					waitForParent[parentId] = {}
+				end
+				for childId, childData in pairs(childTable) do
+					local child = Replica.new(childId, token, childData[1], childData[2], nil, parentId)
+					if waitForParent[childId] then
+						for _, otherChild in ipairs(waitForParent[childId]) do
+							child._children[otherChild] = true
+						end
+						waitForParent[childId] = nil
+					end
+					if waitForParent[parentId] then
+						table.insert(waitForParent[parentId], child)
+					end
+				end
+			end
+		end
+	end
+	
+	if next(waitForParent) ~= nil  then
+		error(`Failed to construct replica '{id}': Parent replica '{self._parentId}' does not exist!`)
+	end
+
+	-- Add to parent (if any)
+	if self._parentId ~= nil then
+		local parent = self:GetParent()
+		if parent then
+			parent._children[self] = true
+		end
+	end
+
+	onReplicaCreated:Fire(self)
+	if newReplicaSignals[self._token] ~= nil then
+		newReplicaSignals[self._token]:Fire(self)
+	end
+
+	return self
+end
+export type Replica = {
+	Id: string,
+	Tags: {[any]: any},
+	Data: {[any]: any},
+	-- Getters
+	IsActive: (self: Replica) -> boolean,
+	Identify: (self: Replica) -> string,
+	GetToken: (self: Replica) -> string,
+	GetParent: (self: Replica) -> Replica?,
+	GetChildren: (self: Replica) -> {[Replica]: true},
+	-- Mutator methods
+	SetValue: (self: Replica, path: Common.Path, value: any, inclusion: {[Player]: boolean}?) -> (),
+	SetValues: (self: Replica, path: Common.Path, values: {[string]: any}, inclusion: {[Player]: boolean}?) -> (),
+	ArrayInsert: (self: Replica, path: Common.Path, value: any, index: number?, inclusion: {[Player]: boolean}?) -> (),
+	ArraySet: (self: Replica, path: Common.Path, index: number, value: any, inclusion: {[Player]: boolean}?) -> (),
+	ArrayRemove: (self: Replica, path: Common.Path, index: number, inclusion: {[Player]: boolean}?) -> (),
+	-- Listener methods
+	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection,
+	OnChange: (self: Replica, path: Common.Path, listener: (new: any, old: any) -> ()) -> Connection,
+	OnNewKey: (self: Replica, path: Common.Path, listener: (keyOrIndex: string | number, value: any) -> ()) -> Connection,
+	OnArrayInsert: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
+	OnArraySet: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
+	OnArrayRemove: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
+	OnRawChange: (self: Replica, path: Common.Path, listener: (actionName: string, pathArray: { string }, ...any) -> ()) -> Connection,
+	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
+	ListenToRaw: (self: Replica, listener: (action: string, pathTable: {string}, value: any) -> ()) -> Connection,
+
+	-- Private
+	_token: string,
+	_active: boolean,
+	_parentId: string?,
+	_children: {[Replica]: true},
+	_listeners: {[any]: any}?,
+	_OnDestroy: Signal,
+	_trove: typeof(Trove.new()),
+}
+
 
 --[=[
 	@class ReplicaController
