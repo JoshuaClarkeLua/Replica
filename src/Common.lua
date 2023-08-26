@@ -193,14 +193,13 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path?,
 end
 
 
-local function _newKeyRecursive(self: any, pathTable, _tempPathTable, _pointer, i): ()
+local function _newKeyRecursive(self: any, pathTable, _pointer, i): ()
 	if i == 0 or i > #pathTable then return end
 	local newKey = pathTable[i]
 	local newValue = _pointer[newKey]
-	table.insert(_tempPathTable, newKey)
-	_newKeyRecursive(self, pathTable, _tempPathTable, newValue, i + 1)
-	table.remove(_tempPathTable, i)
-	fireReplicaSignal(self, "_OnNewKey", _tempPathTable, newKey, newValue)
+	_newKeyRecursive(self, pathTable, newValue, i + 1)
+	table.remove(pathTable, i)
+	fireReplicaSignal(self, "_OnNewKey", pathTable, newKey, newValue)
 end
 
 function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any): ()
@@ -209,9 +208,11 @@ function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number
 	fireReplicaSignal(self, "_OnChange", pathTable, value, old)
 	if old == nil then
 		local _newKeyIndex = newKeyIndex or #pathTable
-		local _tempPathTable = table.move(pathTable, 1, _newKeyIndex - 1, 1, {})
-		local _pointer = getTableFromPathTable(self.Data, _tempPathTable)
-		_newKeyRecursive(self, pathTable, _tempPathTable, _pointer, _newKeyIndex)
+		local _pointer = self.Data
+		for i = 1, _newKeyIndex - 1 do
+			_pointer = _pointer[pathTable[i]]
+		end
+		_newKeyRecursive(self, table.clone(pathTable), _pointer, _newKeyIndex)
 	end
 end
 
