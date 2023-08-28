@@ -170,31 +170,31 @@ function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: { [Pla
 end
 
 function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> ())
-	return connectReplicaSignal(self, "_OnChange", path, listener)
+	return connectReplicaSignal(self, Common.SIGNAL.OnChange, path, listener)
 end
 
 function Replica:OnNewKey(path: Common.Path?, listener: (key: any, value: any) -> ())
-	return connectReplicaSignal(self, "_OnNewKey", path, listener)
+	return connectReplicaSignal(self, Common.SIGNAL.OnNewKey, path, listener)
 end
 
 function Replica:OnArrayInsert(path: Common.Path, listener: (index: number, value: any) -> ())
-	return connectReplicaSignal(self, "_OnArrayInsert", path, listener)
+	return connectReplicaSignal(self, Common.SIGNAL.OnArrayInsert, path, listener)
 end
 
 function Replica:OnArraySet(path: Common.Path, listener: (index: number, value: any) -> ())
-	return connectReplicaSignal(self, "_OnArraySet", path, listener)
+	return connectReplicaSignal(self, Common.SIGNAL.OnArraySet, path, listener)
 end
 
 function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, value: any) -> ())
-	return connectReplicaSignal(self, "_OnArrayRemove", path, listener)
+	return connectReplicaSignal(self, Common.SIGNAL.OnArrayRemove, path, listener)
 end
 
 function Replica:OnRawChange(path: Common.Path?, listener: (actionName: string, pathTable: Common.PathTable, ...any) -> ())
-	return connectReplicaSignal(self, "_OnRawChange", path, listener)
+	return connectReplicaSignal(self, Common.SIGNAL.OnRawChange, path, listener)
 end
 
 function Replica:OnChildAdded(listener: (child: Replica) -> ())
-	return connectReplicaSignal(self, "_OnChildAdded", nil, listener)
+	return connectReplicaSignal(self, Common.SIGNAL.OnChildAdded, nil, listener)
 end
 
 function Replica.new(

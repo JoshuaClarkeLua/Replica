@@ -1,23 +1,20 @@
 local Signal = require(script.Parent.Parent.Signal)
 
--- type Replica = {
--- 	Id: string,
--- 	Tags: { [string]: any },
--- 	Data: { [any]: any },
--- 
--- 	_listeners: { [any]: any }?,
--- 	_trove: typeof(Trove.new()),
--- 
--- 	IsActive: (self: Replica) -> boolean,
--- 	GetToken: (self: Replica) -> string,
--- }
-
 export type Path = string | PathTable
 export type PathTable = {string | number}
 export type PathIndex = string | number
 
 local Common = {}
 local SIGNAL_LIST = {}
+local SIGNAL = {
+	OnChange = 1,
+	OnRawChange = 2,
+	OnNewKey = 3,
+	OnArrayInsert = 4,
+	OnArraySet = 5,
+	OnArrayRemove = 6,
+	OnChildAdded = 7,
+}
 
 
 local function getPathTable(path: Path): PathTable
@@ -199,13 +196,13 @@ local function _newKeyRecursive(self: any, pathTable, _pointer, i): ()
 	local newValue = _pointer[newKey]
 	_newKeyRecursive(self, pathTable, newValue, i + 1)
 	table.remove(pathTable, i)
-	fireReplicaSignal(self, "_OnNewKey", pathTable, newKey, newValue)
+	fireReplicaSignal(self, SIGNAL.OnNewKey, pathTable, newKey, newValue)
 end
 
 function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any): ()
 	local old = pointer[index]
 	pointer[index] = value
-	fireReplicaSignal(self, "_OnChange", pathTable, value, old)
+	fireReplicaSignal(self, SIGNAL.OnChange, pathTable, value, old)
 	if old == nil then
 		local _newKeyIndex = newKeyIndex or #pathTable
 		local _pointer = self.Data
@@ -220,7 +217,7 @@ function Common.onSetValue(self: any, path: Path, value: any): ()
 	local pathTable = getPathTable(path)
 	local pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, pathTable)
 	Common._onSetValue(self, pathTable, newKeyIndex, pointer, index, value)
-	fireReplicaSignal(self, "_OnRawChange", pathTable, "SetValue", pathTable, value)
+	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "SetValue", pathTable, value)
 end
 
 function Common.onSetValues(self: any, path: Path, values: { [PathIndex]: any }): ()
@@ -230,7 +227,7 @@ function Common.onSetValues(self: any, path: Path, values: { [PathIndex]: any })
 	for key, value in pairs(values) do
 		Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, value)
 	end
-	fireReplicaSignal(self, "_OnRawChange", pathTable, "SetValues", pathTable, values)
+	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "SetValues", pathTable, values)
 end
 
 function Common.onArrayInsert(self: any, path: Path, index: number?, value: any): number
@@ -238,8 +235,8 @@ function Common.onArrayInsert(self: any, path: Path, index: number?, value: any)
 	local pointer, pointer_index = getPathTablePointerCreate(self.Data, pathTable)
 	local _index = index or #pointer[pointer_index] + 1
 	table.insert(pointer[pointer_index], _index, value)
-	fireReplicaSignal(self, "_OnArrayInsert", pathTable, _index, value)
-	fireReplicaSignal(self, "_OnRawChange", pathTable, "ArrayInsert", pathTable, index, value)
+	fireReplicaSignal(self, SIGNAL.OnArrayInsert, pathTable, _index, value)
+	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "ArrayInsert", pathTable, index, value)
 	return _index
 end
 
@@ -247,8 +244,8 @@ function Common.onArraySet(self: any, path: Path, index: number, value: any): ()
 	local pathTable = getPathTable(path)
 	local pointer, _index = getPathTablePointerCreate(self.Data, pathTable)
 	pointer[_index][index] = value
-	fireReplicaSignal(self, "_OnArraySet", pathTable, index, value)
-	fireReplicaSignal(self, "_OnRawChange", pathTable, "ArraySet", pathTable, index, value)
+	fireReplicaSignal(self, SIGNAL.OnArraySet, pathTable, index, value)
+	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "ArraySet", pathTable, index, value)
 end
 
 function Common.onArrayRemove(self: any, path: Path, index: number): ()
@@ -256,12 +253,12 @@ function Common.onArrayRemove(self: any, path: Path, index: number): ()
 	local pointer, _index = getPathTablePointerCreate(self.Data, pathTable)
 	local old = pointer[_index][index]
 	table.remove(pointer[_index], index)
-	fireReplicaSignal(self, "_OnArrayRemove", pathTable, index, old)
-	fireReplicaSignal(self, "_OnRawChange", pathTable, "ArrayRemove", pathTable, index, old)
+	fireReplicaSignal(self, SIGNAL.OnArrayRemove, pathTable, index, old)
+	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "ArrayRemove", pathTable, index, old)
 end
 
 function Common.onSetParent(self: any, parent): ()
-	fireReplicaSignal(parent, "_OnChildAdded", nil, self)
+	fireReplicaSignal(parent, SIGNAL.OnChildAdded, nil, self)
 end
 
 function Common.identify(self: any): string
@@ -272,4 +269,5 @@ function Common.identify(self: any): string
 	return `Id:{self.Id};Token:{self:GetToken()};Tags:\{{tagString}\}`
 end
 
+Common.SIGNAL = SIGNAL
 return Common
