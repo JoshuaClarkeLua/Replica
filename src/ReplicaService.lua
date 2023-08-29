@@ -58,6 +58,42 @@ local onActivePlayerRemoved
 
 	An object that can be replicated to clients.
 ]=]
+--[=[
+	@prop Id string
+	@within Replica
+	@readonly
+	@tag Shared
+
+	The Replica's unique identifier.
+]=]
+--[=[
+	@prop Tags { [string]: any }
+	@within Replica
+	@tag Shared
+
+	The Replica's tags.
+]=]
+--[=[
+	@prop Data { [string]: any }
+	@within Replica
+	@tag Shared
+
+	The Replica's data.
+]=]
+--[=[
+	@interface FilterSettings
+	@within Replica
+	@field filter FilterName? -- The name of the Filter to set. If nil, the filter will not be changed.
+	@field players { [Player]: true }? -- List of players added to the filter list. If nil, the filter list will not be changed.
+]=]
+--[=[
+	@type FilterName "All" | "Include" | "Exclude"
+	@within Replica
+]=]
+--[=[
+	@type FilterList { [Player]: true }
+	@within Replica
+]=]
 local Replica = {}
 Replica.__index = Replica
 
@@ -344,7 +380,13 @@ local function onPlayerRequestData(player: Player): ()
 	requestData:Fire(player, data)
 end
 
+--[=[
+	@function new
+	@within Replica
+	@ignore
 
+	Creates a new Replica.
+]=]
 function Replica.new(props: ReplicaProps): Replica
 	local trove = Trove.new()
 
@@ -402,83 +444,267 @@ function Replica.new(props: ReplicaProps): Replica
 end
 export type Replica = typeof(Replica.new(...))
 
+--[=[
+	@method IsActive
+	@within Replica
+	@tag Shared
+
+	Returns whether the Replica is active or not.
+
+	@return boolean -- Whether the Replica is active or not.
+]=]
 function Replica:IsActive(): boolean
 	return self._active
 end
 
+--[=[
+	@method Identify
+	@within Replica
+	@tag Shared
+	
+	Returns a string that identifies the Replica.
+
+	@return string -- A string that identifies the Replica.
+]=]
 function Replica:Identify(): string
 	return identify(self)
 end
 
-function Replica:GetToken(): ReplicaToken
-	return self._token
+--[=[
+	@method GetToken
+	@within Replica
+	@tag Shared
+
+	Returns the Replica's Token name.
+
+	@return string -- The name of the ReplicaToken used to create the Replica.
+]=]
+function Replica:GetToken(): string
+	return tostring(self._token)
 end
 
-function Replica:GetFilter(): Filter
-	return self._filter or self._parent:GetFilter()
+--[=[
+	@method GetParent
+	@within Replica
+	@tag Shared
+
+	Returns the Replica's parent.
+
+	@return Replica? -- The Replica's parent. If nil, the Replica is a root Replica.
+]=]
+function Replica:GetParent(): Replica?
+	return self._parent
 end
 
-function Replica:GetFilterList(): { [Player]: true }
-	return self._filterList or self._parent:GetFilterList()
+--[=[
+	@method GetChildren
+	@within Replica
+	@tag Shared
+
+	Returns the Replica's children.
+
+	@return { [Replica]: true } -- A list of the Replica's children.
+]=]
+function Replica:GetChildren(): { [Replica]: true }
+	return self._children
 end
 
-function Replica:_GetChildReplicaData(): { [string]: any }
-	return self._child_replica_data or self._parent:_GetChildReplicaData()
-end
+--[=[
+	@method SetValue
+	@within Replica
+	@tag Shared
 
+	Sets a value at a path.
+
+	@param path Path -- The path to set the value at.
+	@param value any -- The value to set.
+	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+]=]
 function Replica:SetValue(path: Common.Path, value: any, inclusion: { [Player]: boolean }?): ()
 	onSetValue(self, path, value)
 	fireRemoteSignalForReplica(self, rep_SetValue, inclusion, path, value)
 end
 
+--[=[
+	@method SetValues
+	@within Replica
+	@tag Shared
+
+	Sets multiple values at a path.
+
+	@param path Path -- The path to set the values at.
+	@param values { [PathIndex]: any } -- The values to set.
+	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+]=]
 function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: { [Player]: boolean }?): ()
 	onSetValues(self, path, values)
 	fireRemoteSignalForReplica(self, rep_SetValues, inclusion, path, values)
 end
 
+--[=[
+	@method ArrayInsert
+	@within Replica
+	@tag Shared
+
+	Inserts a value into an array at a path.
+
+	@param path Path -- The path to insert the value at.
+	@param value any -- The value to insert.
+	@param index number? -- The index to insert the value at. If nil, the value will be inserted at the end of the array.
+	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+]=]
 function Replica:ArrayInsert(path: Common.Path, value: any, index: number?, inclusion: { [Player]: boolean }?): ()
 	local _index = onArrayInsert(self, path, index, value)
 	fireRemoteSignalForReplica(self, rep_ArrayInsert, inclusion, path, _index, value)
 end
 
+--[=[
+	@method ArraySet
+	@within Replica
+	@tag Shared
+
+	Sets a value in an array at a path.
+
+	@param path Path -- The path to set the value at.
+	@param index number -- The index to set the value at.
+	@param value any -- The value to set.
+	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+]=]
 function Replica:ArraySet(path: Common.Path, index: number, value: any, inclusion: { [Player]: boolean }?): ()
 	onArraySet(self, path, index, value)
 	fireRemoteSignalForReplica(self, rep_ArraySet, inclusion, path, index, value)
 end
 
+--[=[
+	@method ArrayRemove
+	@within Replica
+	@tag Shared
+
+	Removes a value from an array at a path.
+
+	@param path Path -- The path to remove the value from.
+	@param index number -- The index to remove the value from.
+	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+]=]
 function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: { [Player]: boolean }?): ()
 	onArrayRemove(self, path, index)
 	fireRemoteSignalForReplica(self, rep_ArrayRemove, inclusion, path, index)
 end
 
+--[=[
+	@method OnChange
+	@within Replica
+	@tag Shared
+
+	Listens for value changes at a path.
+
+	@param path Path? -- The path to listen for changes at.
+	@param listener (new: any, old: any) -> () -- The function to call when the value at the path changes.
+	@return Connection -- Signal Connection
+]=]
 function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnChange, path, listener)
 end
 
+--[=[
+	@method OnNewKey
+	@within Replica
+	@tag Shared
+
+	Listens for new keys at a path.
+
+	@param path Path? -- The path to listen for new keys at. If nil, the listener will be called when a new key is added to the root Data table.
+	@param listener (key: any, value: any) -> () -- The function to call when a new key is added to the path.
+	@return Connection -- Signal Connection
+]=]
 function Replica:OnNewKey(path: Common.Path?, listener: (key: any, value: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnNewKey, path, listener)
 end
 
+--[=[
+	@method OnArrayInsert
+	@within Replica
+	@tag Shared
+
+	Listens for array inserts at a path.
+
+	@param path Path? -- The path to listen for array inserts at.
+	@param listener (index: number, value: any) -> () -- The function to call when a value is inserted into the array at the path.
+	@return Connection -- Signal Connection
+]=]
 function Replica:OnArrayInsert(path: Common.Path, listener: (index: number, value: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnArrayInsert, path, listener)
 end
 
+--[=[
+	@method OnArraySet
+	@within Replica
+	@tag Shared
+
+	Listens for array sets at a path.
+
+	@param path Path? -- The path to listen for array sets at.
+	@param listener (index: number, value: any) -> () -- The function to call when a value is set in the array at the path.
+	@return Connection -- Signal Connection
+]=]
 function Replica:OnArraySet(path: Common.Path, listener: (index: number, value: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnArraySet, path, listener)
 end
 
+--[=[
+	@method OnArrayRemove
+	@within Replica
+	@tag Shared
+
+	Listens for array removes at a path.
+
+	@param path Path? -- The path to listen for array removes at.
+	@param listener (index: number, value: any) -> () -- The function to call when a value is removed from the array at the path.
+	@return Connection -- Signal Connection
+]=]
 function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, value: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnArrayRemove, path, listener)
 end
 
+--[=[
+	@method OnRawChange
+	@within Replica
+	@tag Shared
+
+	Listens for raw changes at a path.
+
+	@param path Path? -- The path to listen for raw changes at.
+	@param listener (actionName: string, pathTable: PathTable, ...any) -> () -- The function to call when a raw change occurs at the path.
+	@return Connection -- Signal Connection
+]=]
 function Replica:OnRawChange(path: Common.Path?, listener: (actionName: string, pathTable: Common.PathTable, ...any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnRawChange, path, listener)
 end
 
+--[=[
+	@method OnChildAdded
+	@within Replica
+	@tag Shared
+
+	Listens for child Replicas being added.
+
+	@param listener (child: Replica) -> () -- The function to call when a child Replica is added.
+	@return Connection -- Signal Connection
+]=]
 function Replica:OnChildAdded(listener: (child: Replica) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnChildAdded, nil, listener)
 end
 
+--[=[
+	@method OnChildRemoved
+	@within Replica
+	@tag Shared
+
+	Listens for child Replicas being removed.
+
+	@param listener (child: Replica) -> () -- The function to call when this Replica is destroyed.
+	@return Connection -- Signal Connection
+]=]
 function Replica:OnDestroy(listener: (replica: Replica) -> ())
 	if not self:IsActive() then
 		task.spawn(listener, self)
@@ -490,9 +716,29 @@ end
 -- function Replica:Write(): ()
 --
 -- end
---[[
-	SERVER ONLY
-]]
+
+--[=[
+	@method _GetChildReplicaData
+	@within Replica
+	@server
+	@ignore
+
+	@return { [string]: any } -- A table of child Replica data.
+]=]
+function Replica:_GetChildReplicaData(): { [string]: any }
+	return self._child_replica_data or self._parent:_GetChildReplicaData()
+end
+
+--[=[
+	@method SetParent
+	@within Replica
+	@server
+
+	Sets the parent of the Replica. Only works on root Replicas 
+	(replicas with no initial parent.)
+
+	@param parent Replica -- The Replica to set as the parent.
+]=]
 function Replica:SetParent(parent: Replica): ()
 	if self._parent == nil then
 		error(`Could not set parent: A root Replica cannot have parents`)
@@ -514,6 +760,15 @@ function Replica:SetParent(parent: Replica): ()
 	_onSetParent(self, parent)
 end
 
+--[=[
+	@method SetReplication
+	@within Replica
+	@server
+
+	@param settings FilterSettings -- The settings to set the Replica's replication to.
+
+	Sets the replication settings of the Replica.
+]=]
 function Replica:SetReplication(settings: {
 	filter: Filter?,
 	players: { [Player]: true }?,
@@ -538,26 +793,100 @@ function Replica:SetReplication(settings: {
 	)
 end
 
+--[=[
+	@method AddToFilter
+	@within Replica
+	@server
+
+	Adds a player to the Replica's filter list.
+
+	@param player Player -- The player to add to the filter list.
+]=]
 function Replica:AddToFilter(player: Player): ()
 	addToFilter(self, player)
 end
 
+--[=[
+	@method RemoveFromFilter
+	@within Replica
+	@server
+
+	Removes a player from the Replica's filter list.
+
+	@param player Player -- The player to remove from the filter list.
+]=]
 function Replica:RemoveFromFilter(player: Player): ()
 	removeFromFilter(self, player)
 end
 
+--[=[
+	@method Destroy
+	@within Replica
+	@server
+
+	Destroys the Replica.
+]=]
 function Replica:Destroy(): ()
 	fireRemoteSignalForReplica(self, rep_Destroy)
 	self._trove:Destroy()
 end
 
 --[=[
-	@class ReplicaService
+	@method GetFilterList
+	@within Replica
+	@server
 
+	Returns the Replica's filter list.
+
+	@return { [Player]: true } -- A list of players that the Replica is filtered to.
+]=]
+function Replica:GetFilterList(): { [Player]: true }
+	return self._filterList or self._parent:GetFilterList()
+end
+
+--[=[
+	@method GetFilter
+	@within Replica
+	@server
+
+	Returns the Replica's filter.
+
+	@return Filter -- Type of filter the Replica is using
+]=]
+function Replica:GetFilter(): Filter
+	return self._filter or self._parent:GetFilter()
+end
+
+--[=[
+	@class ReplicaService
+	@server
+	
 	Manages the replication of Replicas to clients.
+]=]
+--[=[
+	@class ReplicaToken
+
+	Token used to identify different types of Replicas.
+]=]
+--[=[
+	@interface ReplicaProps
+	@within ReplicaService
+	@field Token ReplicaToken -- The ReplicaToken to create the Replica with.
+	@field Tags { [string]: any }? -- The tags to create the Replica with. Default: {}
+	@field Data { [string]: any }? -- The data to create the Replica with. Default: {}
+	@field Filter FilterName? -- The filter type to create the Replica with. Default: "All"
+	@field FilterList { [Player]: true }? -- The filter list to create the Replica with. Default: {}
+	@field Parent Replica? -- The parent to create the Replica with. Default: nil
+	@field WriteLib any? -- The write library to create the Replica with. Default: nil
 ]=]
 local ReplicaService = {}
 
+--[=[
+	@method ActivePlayers
+	@within ReplicaService
+
+	@return { [Player]: true } -- A list of active players.
+]=]
 function ReplicaService:ActivePlayers()
 	if not RunService:IsServer() then
 		error("ReplicaService:ActivePlayers() can only be called on the server")
@@ -565,6 +894,15 @@ function ReplicaService:ActivePlayers()
 	return activePlayers
 end
 
+--[=[
+	@method ObserveActivePlayers
+	@within ReplicaService
+
+	Calls observer for current active players and whenever a player is added to the active players list.
+
+	@param observer (player: Player) -> () -- The function to call when a player is added to the active players list.
+	@return Connection -- Signal Connection
+]=]
 function ReplicaService:ObserveActivePlayers(observer: (player: Player) -> ())
 	if not RunService:IsServer() then
 		error("ReplicaService:ObserveActivePlayers() can only be called on the server")
@@ -575,6 +913,15 @@ function ReplicaService:ObserveActivePlayers(observer: (player: Player) -> ())
 	return onActivePlayerAdded:Connect(observer)
 end
 
+--[=[
+	@method OnActivePlayerRemoved
+	@within ReplicaService
+
+	Calls listener whenever a player is removed from the active players list.
+
+	@param listener (player: Player) -> () -- The function to call when a player is removed from the active players list.
+	@return Connection -- Signal Connection
+]=]
 function ReplicaService:OnActivePlayerRemoved(listener: (player: Player) -> ())
 	if not RunService:IsServer() then
 		error("ReplicaService:OnActivePlayerRemoved() can only be called on the server")
@@ -582,6 +929,15 @@ function ReplicaService:OnActivePlayerRemoved(listener: (player: Player) -> ())
 	return onActivePlayerRemoved:Connect(listener)
 end
 
+--[=[
+	@method RegisterToken
+	@within ReplicaService
+
+	Creates a new ReplicaToken.
+
+	@param name string -- The name of the ReplicaToken.
+	@return ReplicaToken -- The ReplicaToken.
+]=]
 function ReplicaService:RegisterToken(name: string): ReplicaToken
 	if not RunService:IsServer() then
 		error("ReplicaService:RegisterToken() can only be called on the server")
@@ -600,6 +956,15 @@ function ReplicaService:RegisterToken(name: string): ReplicaToken
 end
 export type ReplicaToken = typeof(ReplicaService:RegisterToken(...))
 
+--[=[
+	@method NewReplica
+	@within ReplicaService
+
+	Creates a new Replica.
+
+	@param props ReplicaProps -- The properties to create the Replica with.
+	@return Replica -- The Replica.
+]=]
 function ReplicaService:NewReplica(props: ReplicaProps)
 	if not RunService:IsServer() then
 		error("ReplicaService:NewReplica() can only be called on the server")

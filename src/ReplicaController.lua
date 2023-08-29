@@ -324,6 +324,7 @@ export type Replica = {
 
 --[=[
 	@class ReplicaController
+	@client
 
 	Manages the replication of Replicas to clients.
 ]=]
@@ -353,6 +354,12 @@ local function getNewReplicaSignalForToken(token: string): Signal
 	return signal
 end
 
+--[=[
+	@method RequestData
+	@within ReplicaController
+
+	Requests the initial data from the server.
+]=]
 function ReplicaController:RequestData(): ()
 	if not RunService:IsClient() then
 		error("ReplicaController:RequestData() can only be called on the client!")
@@ -368,6 +375,15 @@ function ReplicaController:RequestData(): ()
 	requestData:Fire()
 end
 
+--[=[
+	@method OnNewReplica
+	@within ReplicaController
+
+	Calls listener when a new Replica is created.
+
+	@param listener (replica: Replica) -> () -- Callback function
+	@return Connection -- Signal Connection
+]=]
 function ReplicaController:OnNewReplica(listener: (replica: Replica) -> ())
 	if not RunService:IsClient() then
 		error("ReplicaController:OnNewReplica() can only be called on the client!")
@@ -375,6 +391,16 @@ function ReplicaController:OnNewReplica(listener: (replica: Replica) -> ())
 	return onReplicaCreated:Connect(listener)
 end
 
+--[=[
+	@method OnNewReplicaWithToken
+	@within ReplicaController
+
+	Calls listener when a new Replica with the specified token is created.
+
+	@param token string -- Replica token name
+	@param listener (replica: Replica) -> () -- Callback function
+	@return Connection -- Signal Connection
+]=]
 function ReplicaController:OnNewReplicaWithToken(token: string, listener: (replica: Replica) -> ())
 	if not RunService:IsClient() then
 		error("ReplicaController:OnNewReplicaWithToken() can only be called on the client!")
@@ -382,6 +408,15 @@ function ReplicaController:OnNewReplicaWithToken(token: string, listener: (repli
 	return getNewReplicaSignalForToken(token):Connect(listener)
 end
 
+--[=[
+	@method OnInitialDataReceived
+	@within ReplicaController
+
+	Calls listener when the initial data has been received from the server.
+
+	@param listener () -> () -- Callback function
+	@return Connection -- Signal Connection
+]=]
 function ReplicaController:OnInitialDataReceived(listener: () -> ()): any
 	if not RunService:IsClient() then
 		error("ReplicaController:OnInitialDataReceived() can only be called on the client!")
@@ -394,6 +429,15 @@ function ReplicaController:OnInitialDataReceived(listener: () -> ()): any
 	return
 end
 
+--[=[
+	@method GetReplicaById
+	@within ReplicaController
+
+	Returns the Replica with the specified id.
+
+	@param id string -- Replica id
+	@return Replica? -- Replica
+]=]
 function ReplicaController:GetReplicaById(id: string): Replica?
 	if not RunService:IsClient() then
 		error("ReplicaController:GetReplicaById() can only be called on the client!")
