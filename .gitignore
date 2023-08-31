@@ -20,7 +20,7 @@ sourcemap.json
 .vscode/
 
 # moonwave website
-build/
+# build/
 
 #node modules
 node_modules/
