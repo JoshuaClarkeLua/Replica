@@ -6,12 +6,15 @@ export type PathIndex = string | number
 
 --[=[
 	@type PathTable {string | number}
+	@within Replica
 ]=]
 --[=[
 	@type Path string | PathTable
+	@within Replica
 ]=]
 --[=[
 	@type PathIndex string | number
+	@within Replica
 ]=]
 
 local Common = {}
