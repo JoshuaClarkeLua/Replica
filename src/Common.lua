@@ -4,6 +4,16 @@ export type Path = string | PathTable
 export type PathTable = {string | number}
 export type PathIndex = string | number
 
+--[=[
+	@type PathTable {string | number}
+]=]
+--[=[
+	@type Path string | PathTable
+]=]
+--[=[
+	@type PathIndex string | number
+]=]
+
 local Common = {}
 local SIGNAL_LIST = {}
 local SIGNAL = {
