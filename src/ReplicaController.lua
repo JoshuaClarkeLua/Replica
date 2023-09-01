@@ -357,6 +357,7 @@ end
 --[=[
 	@method RequestData
 	@within ReplicaController
+	@client
 
 	Requests the initial data from the server.
 ]=]
@@ -378,6 +379,7 @@ end
 --[=[
 	@method OnNewReplica
 	@within ReplicaController
+	@client
 
 	Calls listener when a new Replica is created.
 
@@ -394,6 +396,7 @@ end
 --[=[
 	@method OnNewReplicaWithToken
 	@within ReplicaController
+	@client
 
 	Calls listener when a new Replica with the specified token is created.
 
@@ -411,6 +414,7 @@ end
 --[=[
 	@method OnInitialDataReceived
 	@within ReplicaController
+	@client
 
 	Calls listener when the initial data has been received from the server.
 
@@ -432,6 +436,7 @@ end
 --[=[
 	@method GetReplicaById
 	@within ReplicaController
+	@client
 
 	Returns the Replica with the specified id.
 
