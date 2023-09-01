@@ -1,8 +1,75 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Trove = require(script.Parent.Parent.Trove)
 local Signal = require(script.Parent.Parent.Signal)
 
-export type Path = string | PathTable
+type Signal = typeof(Signal.new(...))
+type Connection = typeof(Signal.new(...):Connect(...))
 export type PathTable = {string | number}
+export type Path = string | PathTable
 export type PathIndex = string | number
+export type FilterName = "All" | "Include" | "Exclude"
+export type Filter = number
+export type Replica = {
+	Id: string,
+	Tags: {[any]: any},
+	Data: {[any]: any},
+
+	--[[
+		SHARED
+	]]
+	-- Getters
+	IsActive: (self: Replica) -> boolean,
+	Identify: (self: Replica) -> string,
+	GetToken: (self: Replica) -> string,
+	GetParent: (self: Replica) -> Replica?,
+	GetChildren: (self: Replica) -> {[Replica]: true},
+	-- Mutators
+	SetValue: (self: Replica, path: Path, value: any, inclusion: {[Player]: boolean}?) -> (),
+	SetValues: (self: Replica, path: Path, values: {[PathIndex]: any}, inclusion: {[Player]: boolean}?) -> (),
+	ArrayInsert: (self: Replica, path: Path, value: any, index: number?, inclusion: {[Player]: boolean}?) -> (),
+	ArraySet: (self: Replica, path: Path, index: number, value: any, inclusion: {[Player]: boolean}?) -> (),
+	ArrayRemove: (self: Replica, path: Path, index: number, inclusion: {[Player]: boolean}?) -> (),
+	-- Listeners
+	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection?,
+	OnChange: (self: Replica, path: Path, listener: (new: any, old: any) -> ()) -> Connection,
+	OnNewKey: (self: Replica, path: Path?, listener: (key: any, value: any) -> ()) -> Connection,
+	OnArrayInsert: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
+	OnArraySet: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
+	OnArrayRemove: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
+	OnRawChange: (self: Replica, path: Path?, listener: (actionName: string, pathArray: PathTable, ...any) -> ()) -> Connection,
+	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
+
+	--[[
+		SERVER ONLY
+	]]
+	-- Getters
+	GetFilterList: (self: Replica) -> { [Player]: true },
+	GetFilter: (self: Replica) -> Filter,
+	-- Mutators
+	SetParent: (self: Replica, parent: Replica) -> (),
+	SetReplication: (self: Replica, settings: {
+		filter: Filter?,
+		players: { [Player]: true }?,
+	}) -> (),
+	AddToFilter: (self: Replica, player: Player) -> (),
+	RemoveFromFilter: (self: Replica, player: Player) -> (),
+	Destroy: (self: Replica) -> (),
+
+	-- Private methods
+	_GetChildReplicaData: (self: Replica) -> {[string]: any},
+	
+	-- Private Variables
+	_token: string,
+	_active: boolean,
+	_parentId: string?,
+	_parent: Replica?,
+	_children: {[Replica]: true},
+	_listeners: {[any]: any}?,
+	_OnDestroy: Signal,
+	_filter: Filter,
+	_filterList: {[Player]: true},
+	_trove: typeof(Trove.new()),
+}
 
 --[=[
 	@type PathTable {string | number}

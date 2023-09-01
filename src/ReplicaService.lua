@@ -140,7 +140,7 @@ local function replicateFor(self: Replica, player: Player): ()
 		rep_Create:Fire(
 			player,
 			self.Id,
-			self._token.name,
+			self:GetToken(),
 			self.Tags,
 			self.Data,
 			if self._parent == nil then self:_GetChildReplicaData() else nil,
@@ -244,10 +244,10 @@ local function _addChildData(self: Replica, child: Replica): ()
 		child.Data,
 	}
 	local childReplicaData = self:_GetChildReplicaData()
-	local parentTable = childReplicaData[child._token.name]
+	local parentTable = childReplicaData[child:GetToken()]
 	if parentTable == nil then
 		parentTable = {}
-		childReplicaData[child._token.name] = parentTable
+		childReplicaData[child:GetToken()] = parentTable
 	end
 	local childTable = parentTable[self.Id]
 	if childTable == nil then
@@ -268,7 +268,7 @@ end
 
 local function _removeChildData(self: Replica, child: Replica): ()
 	local childReplicaData = self:_GetChildReplicaData()
-	local parentTable = childReplicaData[child._token.name]
+	local parentTable = childReplicaData[child:GetToken()]
 	if parentTable == nil then
 		return
 	end
@@ -280,7 +280,7 @@ local function _removeChildData(self: Replica, child: Replica): ()
 	if next(childTable) == nil then
 		parentTable[self.Id] = nil
 		if next(parentTable) == nil then
-			childReplicaData[child._token.name] = nil
+			childReplicaData[child:GetToken()] = nil
 		end
 	end
 end
@@ -300,7 +300,7 @@ local function setParent(self: Replica, parent: Replica): ()
 	local newFilter = parent:GetFilter()
 	local newPlayers = parent:GetFilterList()
 	-- remove from old parent
-	removeChild(self._parent, self)
+	removeChild(self._parent :: Replica, self)
 	-- add to new parent
 	self._parent = parent
 	addChild(parent, self)
@@ -365,12 +365,12 @@ local function onPlayerRequestData(player: Player): ()
 		return
 	end
 	activePlayers[player] = true
-	local data = {}
+	local data: {[string]: {any}} = {}
 	for id, replica in pairs(replicas) do
 		if replica._parent == nil and shouldReplicateForPlayer(replica, player) then
 			-- replicateFor(replica, player)
 			data[id] = {
-				replica:GetToken().name,
+				replica:GetToken(),
 				replica.Tags,
 				replica.Data,
 				replica:_GetChildReplicaData(),
