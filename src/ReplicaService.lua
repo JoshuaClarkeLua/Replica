@@ -884,6 +884,7 @@ local ReplicaService = {}
 --[=[
 	@method ActivePlayers
 	@within ReplicaService
+	@server
 
 	@return { [Player]: true } -- A list of active players.
 ]=]
@@ -897,6 +898,7 @@ end
 --[=[
 	@method ObserveActivePlayers
 	@within ReplicaService
+	@server
 
 	Calls observer for current active players and whenever a player is added to the active players list.
 
@@ -916,6 +918,7 @@ end
 --[=[
 	@method OnActivePlayerRemoved
 	@within ReplicaService
+	@server
 
 	Calls listener whenever a player is removed from the active players list.
 
@@ -932,6 +935,7 @@ end
 --[=[
 	@method RegisterToken
 	@within ReplicaService
+	@server
 
 	Creates a new ReplicaToken.
 
@@ -959,6 +963,7 @@ export type ReplicaToken = typeof(ReplicaService:RegisterToken(...))
 --[=[
 	@method NewReplica
 	@within ReplicaService
+	@server
 
 	Creates a new Replica.
 
@@ -970,6 +975,23 @@ function ReplicaService:NewReplica(props: ReplicaProps)
 		error("ReplicaService:NewReplica() can only be called on the server")
 	end
 	return Replica.new(props)
+end
+
+--[=[
+	@method GetReplicaById
+	@within ReplicaService
+	@server
+
+	Returns the Replica with the specified id.
+
+	@param id string -- Replica id
+	@return Replica? -- Replica
+]=]
+function ReplicaService:GetReplicaById(id: string): Replica?
+	if not RunService:IsServer() then
+		error("ReplicaService:GetReplicaById() can only be called on the server!")
+	end
+	return replicas[id]
 end
 
 if RunService:IsServer() then
