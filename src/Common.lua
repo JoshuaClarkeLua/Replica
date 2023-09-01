@@ -276,8 +276,9 @@ local function _newKeyRecursive(self: any, pathTable, _pointer, i): ()
 	fireReplicaSignal(self, SIGNAL.OnNewKey, pathTable, newKey, newValue)
 end
 
-function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any): ()
+function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any): boolean
 	local old = pointer[index]
+	if old == value then return false end
 	pointer[index] = value
 	fireReplicaSignal(self, SIGNAL.OnChange, pathTable, value, old)
 	if old == nil then
@@ -288,13 +289,16 @@ function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number
 		end
 		_newKeyRecursive(self, table.clone(pathTable), _pointer, _newKeyIndex)
 	end
+	return true
 end
 
 function Common.onSetValue(self: any, path: Path, value: any): ()
 	local pathTable = getPathTable(path)
 	local pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, pathTable)
-	Common._onSetValue(self, pathTable, newKeyIndex, pointer, index, value)
-	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "SetValue", pathTable, value)
+	local success = Common._onSetValue(self, pathTable, newKeyIndex, pointer, index, value)
+	if success then
+		fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "SetValue", pathTable, value)
+	end
 end
 
 function Common.onSetValues(self: any, path: Path, values: { [PathIndex]: any }): ()
@@ -302,9 +306,14 @@ function Common.onSetValues(self: any, path: Path, values: { [PathIndex]: any })
 	local pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, pathTable)
 	pathTable[#pathTable + 1] = index
 	for key, value in pairs(values) do
-		Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, value)
+		local success = Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, value)
+		if not success then
+			values[key] = nil
+		end
 	end
-	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "SetValues", pathTable, values)
+	if next(values) ~= nil then
+		fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "SetValues", pathTable, values)
+	end
 end
 
 function Common.onArrayInsert(self: any, path: Path, index: number?, value: any): number
@@ -320,6 +329,8 @@ end
 function Common.onArraySet(self: any, path: Path, index: number, value: any): ()
 	local pathTable = getPathTable(path)
 	local pointer, _index = getPathTablePointerCreate(self.Data, pathTable)
+	local old = pointer[_index][index]
+	if old == value then return end
 	pointer[_index][index] = value
 	fireReplicaSignal(self, SIGNAL.OnArraySet, pathTable, index, value)
 	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "ArraySet", pathTable, index, value)

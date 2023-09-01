@@ -740,6 +740,7 @@ end
 	@param parent Replica -- The Replica to set as the parent.
 ]=]
 function Replica:SetParent(parent: Replica): ()
+	if parent == self:GetParent() then return end
 	if self._parent == nil then
 		error(`Could not set parent: A root Replica cannot have parents`)
 	end
