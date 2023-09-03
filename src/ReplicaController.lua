@@ -7,10 +7,15 @@ local RunService = game:GetService("RunService")
 local Comm = require(script.Parent.Parent.Comm)
 local Signal = require(script.Parent.Parent.Signal)
 local Trove = require(script.Parent.Parent.Trove)
+local Fusion = require(script.Parent.Parent.Fusion)
 local Common = require(script.Parent.Common)
 
 type Signal = typeof(Signal.new(...))
 type Connection = typeof(Signal.new():Connect(...))
+
+-- Fusion Imports
+type StateObject<T> = Fusion.StateObject<T>
+--
 
 -- ServerComm
 local comm
@@ -47,6 +52,7 @@ local _onArrayInsert = Common.onArrayInsert
 local _onArraySet = Common.onArraySet
 local _onArrayRemove = Common.onArrayRemove
 local _onSetParent = Common.onSetParent
+local getState = Common.getState
 local identify = Common.identify
 
 local function onSetValue(id: string, ...: any): ()
@@ -197,6 +203,10 @@ function Replica:OnChildAdded(listener: (child: Replica) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnChildAdded, nil, listener)
 end
 
+function Replica:GetState(path: Common.Path?): StateObject<any>
+	return getState(self, path)
+end
+
 function Replica.new(
 	id: string,
 	token: string,
@@ -310,6 +320,7 @@ export type Replica = {
 	OnArrayRemove: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnRawChange: (self: Replica, path: Common.Path?, listener: (actionName: string, pathArray: Common.PathTable, ...any) -> ()) -> Connection,
 	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
+	GetState: (self: Replica, path: Common.Path?) -> StateObject<any>,
 
 	-- Private
 	_token: string,

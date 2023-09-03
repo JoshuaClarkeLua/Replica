@@ -1,6 +1,41 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Trove = require(script.Parent.Parent.Trove)
 local Signal = require(script.Parent.Parent.Signal)
+local Fusion = require(script.Parent.Parent.Fusion)
+local SelfCleanTable = require(script.Parent.SelfCleanTable)
+
+-- Fusion Imports
+local New = Fusion.New
+local Hydrate = Fusion.Hydrate
+local Ref = Fusion.Ref
+local Cleanup = Fusion.Cleanup
+local Children = Fusion.Children
+local Out: any = Fusion.Out
+local OnEvent = Fusion.OnEvent
+local OnChange = Fusion.OnChange
+--
+local Value = Fusion.Value
+local Computed = Fusion.Computed
+local ForPairs = Fusion.ForPairs
+local ForKeys = Fusion.ForKeys
+local ForValues = Fusion.ForValues
+local Observer = Fusion.Observer
+--
+local Tween = Fusion.Tween
+local Spring = Fusion.Spring
+--
+type Value<T> = Fusion.Value<T>
+type Computed<T> = Fusion.Computed<T>
+type ForPairs<KO, VO> = Fusion.ForPairs<KO, VO>
+type ForKeys<KI, KO> = Fusion.ForKeys<KI, KO>
+type ForValues<VI, VO> = Fusion.ForValues<VI, VO>
+type Observer = Fusion.Observer
+type Tween<T> = Fusion.Tween<T>
+type Spring<T> = Fusion.Spring<T>
+type StateObject<T> = Fusion.StateObject<T>
+type CanBeState<T> = Fusion.CanBeState<T>
+type Symbol = Fusion.Symbol
+--
 
 type Signal = typeof(Signal.new(...))
 type Connection = typeof(Signal.new(...):Connect(...))
@@ -65,6 +100,7 @@ export type Replica = {
 	_parent: Replica?,
 	_children: {[Replica]: true},
 	_listeners: {[any]: any}?,
+	_states: {[any]: any}?,
 	_OnDestroy: Signal,
 	_filter: Filter,
 	_filterList: {[Player]: true},
@@ -83,6 +119,7 @@ export type Replica = {
 
 local Common = {}
 local SIGNAL_LIST = {}
+local STATE = {}
 local SIGNAL = {
 	OnChange = 1,
 	OnRawChange = 2,
@@ -160,12 +197,12 @@ local function getPathTablePointerCreate(data: { [any]: any }, pathTable: PathTa
 	return pointer :: {[any]: any}, index :: PathIndex, newKeyIndex
 end
 
-local function cleanSignalTable(signals: { [PathIndex]: any }, pathTable: PathTable, signalTable: {[PathIndex]: any}): ()
-	if next(signalTable) ~= nil then
+local function cleanTable(rootTable: { [PathIndex]: any }, pathTable: PathTable, finalTable: {[PathIndex]: any}): ()
+	if next(finalTable) ~= nil then
 		return
 	end
 	local i = 1
-	local pointer, index = signals, pathTable[i]
+	local pointer, index = rootTable, pathTable[i]
 	local removePointer: any, removeIndex: any
 	while index ~= nil do
 		if pointer[index] == nil then
@@ -206,6 +243,18 @@ local function fireReplicaSignal(self: any, signalName: string, pathTable: PathT
 				if signal ~= nil then
 					signal:Fire(...)
 				end
+			end
+		end
+	end
+end
+
+local function updateStateValue(self: any, pathTable: PathTable, value: any): ()
+	if self._states ~= nil then
+		local pointer, index = getPathTablePointer(self._states, pathTable, false)
+		if pointer ~= nil then
+			local state = pointer[index] and pointer[index][STATE] or nil
+			if state ~= nil then
+				state:set(value)
 			end
 		end
 	end
@@ -253,7 +302,7 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path?,
 					signalTable[signalName] = nil
 					local pathTable = path ~= nil and getPathTable(path) or {}
 					table.insert(pathTable, SIGNAL_LIST)
-					cleanSignalTable(listeners, pathTable, signalTable)
+					cleanTable(listeners, pathTable, signalTable)
 					if next(listeners) == nil then
 						self._listeners = nil
 					end
@@ -280,6 +329,9 @@ function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number
 	local old = pointer[index]
 	if old == value then return false end
 	pointer[index] = value
+	-- Update state
+	updateStateValue(self, pathTable, value)
+	--
 	fireReplicaSignal(self, SIGNAL.OnChange, pathTable, value, old)
 	if old == nil then
 		local _newKeyIndex = newKeyIndex or #pathTable
@@ -321,6 +373,10 @@ function Common.onArrayInsert(self: any, path: Path, index: number?, value: any)
 	local pointer, pointer_index = getPathTablePointerCreate(self.Data, pathTable)
 	local _index = index or #pointer[pointer_index] + 1
 	table.insert(pointer[pointer_index], _index, value)
+	table.insert(pathTable, _index)
+	updateStateValue(self, pathTable, value)
+	table.remove(pathTable, #pathTable)
+	updateStateValue(self, pathTable, pointer[pointer_index])
 	fireReplicaSignal(self, SIGNAL.OnArrayInsert, pathTable, _index, value)
 	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "ArrayInsert", pathTable, index, value)
 	return _index
@@ -332,6 +388,10 @@ function Common.onArraySet(self: any, path: Path, index: number, value: any): ()
 	local old = pointer[_index][index]
 	if old == value then return end
 	pointer[_index][index] = value
+	table.insert(pathTable, index)
+	updateStateValue(self, pathTable, value)
+	table.remove(pathTable, #pathTable)
+	updateStateValue(self, pathTable, pointer[_index])
 	fireReplicaSignal(self, SIGNAL.OnArraySet, pathTable, index, value)
 	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "ArraySet", pathTable, index, value)
 end
@@ -341,12 +401,49 @@ function Common.onArrayRemove(self: any, path: Path, index: number): ()
 	local pointer, _index = getPathTablePointerCreate(self.Data, pathTable)
 	local old = pointer[_index][index]
 	table.remove(pointer[_index], index)
+	local new = pointer[_index][index]
+	table.insert(pathTable, index)
+	updateStateValue(self, pathTable, new)
+	table.remove(pathTable, #pathTable)
+	updateStateValue(self, pathTable, pointer[_index])
 	fireReplicaSignal(self, SIGNAL.OnArrayRemove, pathTable, index, old)
 	fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "ArrayRemove", pathTable, index, old)
 end
 
 function Common.onSetParent(self: any, parent): ()
 	fireReplicaSignal(parent, SIGNAL.OnChildAdded, nil, self)
+end
+
+function Common.getState(self: any, path: Path?): StateObject<any>
+	Common.assertActive(self)
+	local states = self._states
+	if states == nil then
+		states = SelfCleanTable.new()
+		self._states = states
+	end
+
+	local pointer = states
+	local pathTable
+	
+	if path ~= nil then
+		pathTable = getPathTable(path)
+		pointer = getTableFromPathTableCreate(states, pathTable)
+	end
+
+	local state = pointer[STATE]
+	if state == nil then
+		local value = self.Data
+		if pathTable ~= nil then
+			local _pointer, _index = getPathTablePointer(self.Data, pathTable, false)
+			if _pointer ~= nil then
+				value = _pointer[_index]
+			end
+		end
+		state = Value(value)
+		pointer[STATE] = state
+	end
+
+	return state
 end
 
 function Common.identify(self: any): string
