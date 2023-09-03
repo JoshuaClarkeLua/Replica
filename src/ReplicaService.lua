@@ -9,12 +9,7 @@ local Players = game:GetService("Players")
 local Comm = require(script.Parent.Parent.Comm)
 local Signal = require(script.Parent.Parent.Signal)
 local Trove = require(script.Parent.Parent.Trove)
-local Fusion = require(script.Parent.Parent.Fusion)
 local Common = require(script.Parent.Common)
-
--- Fusion Imports
-type StateObject<T> = Fusion.StateObject<T>
---
 
 export type FilterName = "All" | "Include" | "Exclude"
 export type Filter = number
@@ -109,7 +104,6 @@ local onSetValues = Common.onSetValues
 local onArrayInsert = Common.onArrayInsert
 local onArraySet = Common.onArraySet
 local onArrayRemove = Common.onArrayRemove
-local getState = Common.getState
 local _onSetParent = Common.onSetParent
 local identify = Common.identify
 
@@ -699,10 +693,6 @@ end
 ]=]
 function Replica:OnChildAdded(listener: (child: Replica) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnChildAdded, nil, listener)
-end
-
-function Replica:GetState(path: Common.Path?): StateObject<any>
-	return getState(self, path)
 end
 
 --[=[

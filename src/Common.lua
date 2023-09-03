@@ -249,15 +249,17 @@ local function fireReplicaSignal(self: any, signalName: string, pathTable: PathT
 end
 
 local function updateStateValue(self: any, pathTable: PathTable, value: any): ()
-	if self._states ~= nil then
-		local pointer, index = getPathTablePointer(self._states, pathTable, false)
-		if pointer ~= nil then
-			local state = pointer[index] and pointer[index][STATE] or nil
-			if state ~= nil then
-				state:set(value)
-			end
-		end
-	end
+	if self._listeners == nil then return end
+	local pointer, index = getPathTablePointer(self._listeners, pathTable, false)
+	if pointer == nil then return end
+	pointer = pointer[index]
+	if pointer == nil then return end
+	local signalTable = pointer[SIGNAL_LIST] or nil
+	if signalTable == nil then return end
+	local state = signalTable[STATE]
+	if state == nil then return end
+
+	state:set(value)
 end
 
 function Common.assertActive(self: any): ()
@@ -270,7 +272,7 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path?,
 	Common.assertActive(self)
 	local listeners = self._listeners
 	if listeners == nil then
-		listeners = {}
+		listeners = SelfCleanTable.new()
 		self._listeners = listeners
 	end
 
@@ -416,23 +418,29 @@ end
 
 function Common.getState(self: any, path: Path?): StateObject<any>
 	Common.assertActive(self)
-	local states = self._states
-	if states == nil then
-		states = SelfCleanTable.new()
-		self._states = states
+	local listeners = self._listeners
+	if listeners == nil then
+		listeners = SelfCleanTable.new()
+		self._listeners = listeners
 	end
 
-	local pointer = states
+	local pointer = listeners
 	local pathTable
 	
 	if path ~= nil then
 		pathTable = getPathTable(path)
-		pointer = getTableFromPathTableCreate(states, pathTable)
+		pointer = getTableFromPathTableCreate(listeners, pathTable)
 	end
 
-	local state = pointer[STATE]
+	local signalTable = pointer[SIGNAL_LIST]
+	if signalTable == nil then
+		signalTable = {}
+		pointer[SIGNAL_LIST] = signalTable
+	end
+
+	local state = signalTable[STATE]
 	if state == nil then
-		local value = self.Data
+		local value
 		if pathTable ~= nil then
 			local _pointer, _index = getPathTablePointer(self.Data, pathTable, false)
 			if _pointer ~= nil then
@@ -440,7 +448,7 @@ function Common.getState(self: any, path: Path?): StateObject<any>
 			end
 		end
 		state = Value(value)
-		pointer[STATE] = state
+		signalTable[STATE] = state
 	end
 
 	return state

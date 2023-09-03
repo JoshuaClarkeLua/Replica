@@ -14,7 +14,36 @@ type Signal = typeof(Signal.new(...))
 type Connection = typeof(Signal.new():Connect(...))
 
 -- Fusion Imports
+local New = Fusion.New
+local Hydrate = Fusion.Hydrate
+local Ref = Fusion.Ref
+local Cleanup = Fusion.Cleanup
+local Children = Fusion.Children
+local Out: any = Fusion.Out
+local OnEvent = Fusion.OnEvent
+local OnChange = Fusion.OnChange
+--
+local Value = Fusion.Value
+local Computed = Fusion.Computed
+local ForPairs = Fusion.ForPairs
+local ForKeys = Fusion.ForKeys
+local ForValues = Fusion.ForValues
+local Observer = Fusion.Observer
+--
+local Tween = Fusion.Tween
+local Spring = Fusion.Spring
+--
+type Value<T> = Fusion.Value<T>
+type Computed<T> = Fusion.Computed<T>
+type ForPairs<KO, VO> = Fusion.ForPairs<KO, VO>
+type ForKeys<KI, KO> = Fusion.ForKeys<KI, KO>
+type ForValues<VI, VO> = Fusion.ForValues<VI, VO>
+type Observer = Fusion.Observer
+type Tween<T> = Fusion.Tween<T>
+type Spring<T> = Fusion.Spring<T>
 type StateObject<T> = Fusion.StateObject<T>
+type CanBeState<T> = Fusion.CanBeState<T>
+type Symbol = Fusion.Symbol
 --
 
 -- ServerComm
@@ -320,7 +349,6 @@ export type Replica = {
 	OnArrayRemove: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnRawChange: (self: Replica, path: Common.Path?, listener: (actionName: string, pathArray: Common.PathTable, ...any) -> ()) -> Connection,
 	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
-	GetState: (self: Replica, path: Common.Path?) -> StateObject<any>,
 
 	-- Private
 	_token: string,
