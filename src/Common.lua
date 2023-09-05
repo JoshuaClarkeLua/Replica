@@ -1,5 +1,3 @@
-local ProjectRoot = game:GetService("ProjectRoot")
-local replica = require(ProjectRoot)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Trove = require(script.Parent.Parent.Trove)
 local Signal = require(script.Parent.Parent.Signal)
