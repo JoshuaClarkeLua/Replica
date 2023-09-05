@@ -3,7 +3,7 @@ name = "joshuaclarkelua/replica"
 description = "Replication library heavily inspired by MadStudioRoblox/ReplicaService on github."
 license = "MIT"
 authors = ["JCL"]
-version = "1.4.5"
+version = "1.5.2"
 
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
@@ -15,3 +15,4 @@ include = ["src", "src/*", "default.project.json", "wally.lock", "wally.toml"]
 Signal = "sleitnick/signal@1.2.1"
 Trove = "sleitnick/trove@0.5.0"
 Comm = "sleitnick/comm@0.3.1"
+Fusion = "elttob/fusion@0.2.0"
