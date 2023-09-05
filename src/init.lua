@@ -1,7 +1,10 @@
+local Common = require(script.Common)
 local Controller = require(script.ReplicaController)
 local Service = require(script.ReplicaService)
 
 export type Replica = Controller.Replica & Service.Replica
+export type Path = Common.Path
+export type FilterName = Common.FilterName
 
 return {
 	Controller = Controller,

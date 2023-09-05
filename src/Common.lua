@@ -11,7 +11,7 @@ type Value<T> = Fusion.Value<T>
 
 export type Signal = typeof(Signal.new(...))
 export type Connection = typeof(Signal.new(...):Connect(...))
-export type PathTable = {string | number}
+export type PathTable = {PathIndex}
 export type Path = string | PathTable
 export type PathIndex = string | number
 export type FilterName = "All" | "Include" | "Exclude"
