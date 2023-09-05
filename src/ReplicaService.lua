@@ -9,7 +9,15 @@ local Players = game:GetService("Players")
 local Comm = require(script.Parent.Parent.Comm)
 local Signal = require(script.Parent.Parent.Signal)
 local Trove = require(script.Parent.Parent.Trove)
+local Fusion = require(script.Parent.Parent.Fusion)
 local Common = require(script.Parent.Common)
+
+-- Fusion Imports
+type Value<T> = Fusion.Value<T>
+--
+
+type Signal = Common.Signal
+type Connection = Common.Connection
 
 export type FilterName = "All" | "Include" | "Exclude"
 export type Filter = number
@@ -23,8 +31,6 @@ export type ReplicaProps = {
 	Parent: Replica?, -- Default: nil
 	-- WriteLib: any, -- ModuleScript
 }
-
-export type Signal = typeof(Signal.new(...))
 
 -- ServerComm
 local comm
@@ -413,7 +419,6 @@ function Replica.new(props: ReplicaProps): Replica
 		_children = {},
 		-- Signals (setting them to nil uses memory...)
 		_OnDestroy = Signal.new(),
-		-- _listeners = nil,
 		-- Cleanup
 		_trove = trove,
 	}, Replica)
@@ -422,6 +427,7 @@ function Replica.new(props: ReplicaProps): Replica
 	trove:Add(function()
 		self._active = false
 		replicas[self.Id] = nil
+		Common.cleanSignals(self)
 
 		for child in pairs(self._children) do
 			child._trove:Destroy()
@@ -442,7 +448,7 @@ function Replica.new(props: ReplicaProps): Replica
 	initReplication(self)
 	return self
 end
-export type Replica = typeof(Replica.new(...))
+export type Replica = Common.Replica
 
 --[=[
 	@method IsActive
@@ -693,6 +699,20 @@ end
 ]=]
 function Replica:OnChildAdded(listener: (child: Replica) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnChildAdded, nil, listener)
+end
+
+--[=[
+	@method ObserveState
+	@within Replica
+
+	Observes the value at the specified path and sets it as the value of the Fusion Value object.
+
+	@param path Path -- The path to observe.
+	@param valueObject Value<any> -- The Fusion Value object to set the value of.
+	@return Connection -- Signal Connection
+]=]
+function Replica:ObserveState(path: Common.Path, valueObject: Value<any>): Connection
+	return Common.observeState(self, path, valueObject)
 end
 
 --[=[

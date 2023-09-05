@@ -7,10 +7,15 @@ local RunService = game:GetService("RunService")
 local Comm = require(script.Parent.Parent.Comm)
 local Signal = require(script.Parent.Parent.Signal)
 local Trove = require(script.Parent.Parent.Trove)
+local Fusion = require(script.Parent.Parent.Fusion)
 local Common = require(script.Parent.Common)
 
-type Signal = typeof(Signal.new(...))
-type Connection = typeof(Signal.new():Connect(...))
+-- Fusion Imports
+type Value<T> = Fusion.Value<T>
+--
+
+type Signal = Common.Signal
+type Connection = Common.Connection
 
 -- ServerComm
 local comm
@@ -197,6 +202,10 @@ function Replica:OnChildAdded(listener: (child: Replica) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnChildAdded, nil, listener)
 end
 
+function Replica:ObserveState(path: Common.Path, valueObject: Value<any>): Connection
+	return Common.observeState(self, path, valueObject)
+end
+
 function Replica.new(
 	id: string,
 	token: string,
@@ -219,7 +228,6 @@ function Replica.new(
 		_children = {},
 		-- Signals
 		_OnDestroy = Signal.new(),
-		-- _listeners = nil,
 		-- Cleanup
 		_trove = trove,
 	}, Replica)
@@ -228,6 +236,7 @@ function Replica.new(
 	trove:Add(function()
 		self._active = false
 		replicas[self.Id] = nil
+		Common.cleanSignals(self)
 
 		for child in pairs(self._children) do
 			child._trove:Destroy()
@@ -285,41 +294,7 @@ function Replica.new(
 
 	return self
 end
-export type Replica = {
-	Id: string,
-	Tags: {[any]: any},
-	Data: {[any]: any},
-	-- Getters
-	IsActive: (self: Replica) -> boolean,
-	Identify: (self: Replica) -> string,
-	GetToken: (self: Replica) -> string,
-	GetParent: (self: Replica) -> Replica?,
-	GetChildren: (self: Replica) -> {[Replica]: true},
-	-- Mutator methods
-	SetValue: (self: Replica, path: Common.Path, value: any, inclusion: {[Player]: boolean}?) -> (),
-	SetValues: (self: Replica, path: Common.Path, values: {[Common.PathIndex]: any}, inclusion: {[Player]: boolean}?) -> (),
-	ArrayInsert: (self: Replica, path: Common.Path, value: any, index: number?, inclusion: {[Player]: boolean}?) -> (),
-	ArraySet: (self: Replica, path: Common.Path, index: number, value: any, inclusion: {[Player]: boolean}?) -> (),
-	ArrayRemove: (self: Replica, path: Common.Path, index: number, inclusion: {[Player]: boolean}?) -> (),
-	-- Listener methods
-	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection?,
-	OnChange: (self: Replica, path: Common.Path, listener: (new: any, old: any) -> ()) -> Connection,
-	OnNewKey: (self: Replica, path: Common.Path?, listener: (key: any, value: any) -> ()) -> Connection,
-	OnArrayInsert: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
-	OnArraySet: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
-	OnArrayRemove: (self: Replica, path: Common.Path, listener: (index: number, value: any) -> ()) -> Connection,
-	OnRawChange: (self: Replica, path: Common.Path?, listener: (actionName: string, pathArray: Common.PathTable, ...any) -> ()) -> Connection,
-	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
-
-	-- Private
-	_token: string,
-	_active: boolean,
-	_parentId: string?,
-	_children: {[Replica]: true},
-	_listeners: {[any]: any}?,
-	_OnDestroy: Signal,
-	_trove: typeof(Trove.new()),
-}
+export type Replica = Common.Replica
 
 
 --[=[

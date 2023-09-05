@@ -1,9 +1,16 @@
+local ProjectRoot = game:GetService("ProjectRoot")
+local replica = require(ProjectRoot)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Trove = require(script.Parent.Parent.Trove)
 local Signal = require(script.Parent.Parent.Signal)
+local Fusion = require(script.Parent.Parent.Fusion)
 
-type Signal = typeof(Signal.new(...))
-type Connection = typeof(Signal.new(...):Connect(...))
+-- Fusion Imports
+type Value<T> = Fusion.Value<T>
+--
+
+export type Signal = typeof(Signal.new(...))
+export type Connection = typeof(Signal.new(...):Connect(...))
 export type PathTable = {string | number}
 export type Path = string | PathTable
 export type PathIndex = string | number
@@ -38,6 +45,8 @@ export type Replica = {
 	OnArrayRemove: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnRawChange: (self: Replica, path: Path?, listener: (actionName: string, pathArray: PathTable, ...any) -> ()) -> Connection,
 	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
+	-- Observers
+	ObserveState: (self: Replica, path: Path, valueObject: Value<any>) -> Connection,
 
 	--[[
 		SERVER ONLY
@@ -64,11 +73,12 @@ export type Replica = {
 	_parentId: string?,
 	_parent: Replica?,
 	_children: {[Replica]: true},
-	_listeners: {[any]: any}?,
+	_signals: {[any]: any}?,
 	_OnDestroy: Signal,
 	_filter: Filter,
 	_filterList: {[Player]: true},
 	_trove: typeof(Trove.new()),
+	_child_replica_data: {[string]: any}?,
 }
 
 --[=[
@@ -194,10 +204,10 @@ local function cleanSignalTable(signals: { [PathIndex]: any }, pathTable: PathTa
 end
 
 local function fireReplicaSignal(self: any, signalName: string, pathTable: PathTable?, ...: any): ()
-	if self._listeners ~= nil then
-		local pointer = self._listeners
+	if self._signals ~= nil then
+		local pointer = self._signals
 		if pathTable ~= nil then
-			pointer = getTableFromPathTable(self._listeners, pathTable, false)
+			pointer = getTableFromPathTable(self._signals, pathTable, false)
 		end
 		if pointer then
 			local signalList = pointer[SIGNAL_LIST]
@@ -219,17 +229,17 @@ end
 
 function Common.connectReplicaSignal(self: any, signalName: string, path: Path?, listener: (...any) -> ())
 	Common.assertActive(self)
-	local listeners = self._listeners
-	if listeners == nil then
-		listeners = {}
-		self._listeners = listeners
+	local signals = self._signals
+	if signals == nil then
+		signals = {}
+		self._signals = signals
 	end
 
-	local pointer = listeners
+	local pointer = signals
 	
 	if path ~= nil then
 		local pathTable = getPathTable(path)
-		pointer = getTableFromPathTableCreate(listeners, pathTable)
+		pointer = getTableFromPathTableCreate(signals, pathTable)
 	end
 
 	local signalTable = pointer[SIGNAL_LIST]
@@ -253,9 +263,9 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path?,
 					signalTable[signalName] = nil
 					local pathTable = path ~= nil and getPathTable(path) or {}
 					table.insert(pathTable, SIGNAL_LIST)
-					cleanSignalTable(listeners, pathTable, signalTable)
-					if next(listeners) == nil then
-						self._listeners = nil
+					cleanSignalTable(signals, pathTable, signalTable)
+					if next(signals) == nil then
+						self._signals = nil
 					end
 				end
 			end
@@ -266,6 +276,25 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path?,
 	return signal:Connect(listener)
 end
 
+local function _cleanSignalsRecursive(self: any, signals): ()
+	local signalTable = signals[SIGNAL_LIST]
+	if signalTable ~= nil then
+		for signalName, signal in pairs(signalTable) do
+			signal:Destroy()
+			signalTable[signalName] = nil
+		end
+		signals[SIGNAL_LIST] = nil
+	end
+	for index, table in pairs(signals) do
+		task.spawn(_cleanSignalsRecursive, self, table)
+	end
+end
+
+function Common.cleanSignals(self: any): ()
+	local signals = self._signals
+	if signals == nil then return end
+	_cleanSignalsRecursive(self, signals)
+end
 
 local function _newKeyRecursive(self: any, pathTable, _pointer, i): ()
 	if i == 0 or i > #pathTable then return end
@@ -347,6 +376,18 @@ end
 
 function Common.onSetParent(self: any, parent): ()
 	fireReplicaSignal(parent, SIGNAL.OnChildAdded, nil, self)
+end
+
+function Common.observeState(self: any, path: Path, valueObject: Value<any>): Connection
+	local pointer, index = getPathTablePointer(self.Data, getPathTable(path), false)
+	local value = nil
+	if pointer then
+		value = pointer[index]
+	end
+	valueObject:set(value)
+	return self:OnChange(path, function(new: any)
+		valueObject:set(new)
+	end)
 end
 
 function Common.identify(self: any): string
