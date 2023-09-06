@@ -21,6 +21,7 @@ type Connection = Common.Connection
 
 export type FilterName = "All" | "Include" | "Exclude"
 export type Filter = number
+export type Inclusion = { [Player]: boolean? }
 
 export type ReplicaProps = {
 	Token: ReplicaToken,
@@ -114,14 +115,14 @@ local _onSetParent = Common.onSetParent
 local identify = Common.identify
 
 
-local function fireRemoteSignalForReplica(self: Replica, signal: any, inclusion: { [Player]: boolean }?, ...: any): ()
+local function fireRemoteSignalForReplica(self: Replica, signal: any, inclusion: Inclusion?, ...: any): ()
 	local replicationFilter = self:GetFilter()
 	if replicationFilter == FILTER.All then
 		signal:FireFilter(function(player: Player)
 			if not activePlayers[player] then
 				return false
 			end
-			return if inclusion ~= nil and inclusion[player] ~= nil then inclusion[player] else true
+			return if inclusion ~= nil and inclusion[player] ~= nil then inclusion[player] or false else true
 		end, self.Id, ...)
 	else
 		signal:FireFilter(function(player: Player)
@@ -129,7 +130,7 @@ local function fireRemoteSignalForReplica(self: Replica, signal: any, inclusion:
 				return false
 			end
 			if inclusion ~= nil and inclusion[player] ~= nil then
-				return inclusion[player]
+				return inclusion[player] or false
 			end
 			if replicationFilter == FILTER.Include then
 				return self:GetFilterList()[player] ~= nil
@@ -229,7 +230,7 @@ local function updateReplication(
 	oldPlayers: { [Player]: true },
 	newFilter: Filter,
 	newPlayers: { [Player]: true }
-): { [Player]: boolean }
+): Inclusion -- { [Player]: true } = Created, { [Player]: false } = Destroyed
 	local changeList = {}
 	if self._parent == nil then
 		self._filter = newFilter
@@ -314,7 +315,7 @@ local function setParent(self: Replica, parent: Replica): ()
 
 	local inclusion = updateReplication(self, oldFilter, oldPlayers, newFilter, newPlayers)
 	for player, change in pairs(inclusion) do
-		inclusion[player] = not change
+		inclusion[player] = change or nil
 	end
 	fireRemoteSignalForReplica(self, rep_SetParent, inclusion, parent.Id)
 end
@@ -524,9 +525,9 @@ end
 
 	@param path Path -- The path to set the value at.
 	@param value any -- The value to set.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:SetValue(path: Common.Path, value: any, inclusion: { [Player]: boolean }?): ()
+function Replica:SetValue(path: Common.Path, value: any, inclusion: Inclusion?): ()
 	onSetValue(self, path, value)
 	fireRemoteSignalForReplica(self, rep_SetValue, inclusion, path, value)
 end
@@ -540,9 +541,9 @@ end
 
 	@param path Path -- The path to set the values at.
 	@param values { [PathIndex]: any } -- The values to set.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: { [Player]: boolean }?): ()
+function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: Inclusion?): ()
 	onSetValues(self, path, values)
 	fireRemoteSignalForReplica(self, rep_SetValues, inclusion, path, values)
 end
@@ -557,9 +558,9 @@ end
 	@param path Path -- The path to insert the value at.
 	@param value any -- The value to insert.
 	@param index number? -- The index to insert the value at. If nil, the value will be inserted at the end of the array.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:ArrayInsert(path: Common.Path, value: any, index: number?, inclusion: { [Player]: boolean }?): ()
+function Replica:ArrayInsert(path: Common.Path, value: any, index: number?, inclusion: Inclusion?): ()
 	local _index = onArrayInsert(self, path, index, value)
 	fireRemoteSignalForReplica(self, rep_ArrayInsert, inclusion, path, _index, value)
 end
@@ -574,9 +575,9 @@ end
 	@param path Path -- The path to set the value at.
 	@param index number -- The index to set the value at.
 	@param value any -- The value to set.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:ArraySet(path: Common.Path, index: number, value: any, inclusion: { [Player]: boolean }?): ()
+function Replica:ArraySet(path: Common.Path, index: number, value: any, inclusion: Inclusion?): ()
 	onArraySet(self, path, index, value)
 	fireRemoteSignalForReplica(self, rep_ArraySet, inclusion, path, index, value)
 end
@@ -590,9 +591,9 @@ end
 
 	@param path Path -- The path to remove the value from.
 	@param index number -- The index to remove the value from.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: { [Player]: boolean }?): ()
+function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: Inclusion?): ()
 	onArrayRemove(self, path, index)
 	fireRemoteSignalForReplica(self, rep_ArrayRemove, inclusion, path, index)
 end
