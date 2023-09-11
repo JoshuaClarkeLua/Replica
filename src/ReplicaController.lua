@@ -155,7 +155,7 @@ function Replica:OnDestroy(listener: (replica: Replica) -> ())
 end
 
 function Replica:SetValue(path: Common.Path, value: any, inclusion: { [Player]: boolean }?): ()
-	_onSetValue(self, path)
+	_onSetValue(self, path, value)
 end
 
 function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: { [Player]: boolean }?): ()
@@ -163,11 +163,11 @@ function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any 
 end
 
 function Replica:ArrayInsert(path: Common.Path, value: any, index: number?, inclusion: { [Player]: boolean }?): ()
-	_onArrayInsert(self, path)
+	_onArrayInsert(self, path, index, value)
 end
 
 function Replica:ArraySet(path: Common.Path, index: number, value: any, inclusion: { [Player]: boolean }?): ()
-	_onArraySet(self, path, index)
+	_onArraySet(self, path, index, value)
 end
 
 function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: { [Player]: boolean }?): ()
