@@ -21,7 +21,7 @@ type Connection = Common.Connection
 
 export type FilterName = "All" | "Include" | "Exclude"
 export type Filter = number
-export type Inclusion = { [Player]: boolean? }
+export type Inclusion = { [Player | "All"]: boolean? }
 
 export type ReplicaProps = {
 	Token: ReplicaToken,
@@ -56,6 +56,7 @@ local FILTER: {
 	Include: number,
 	Exclude: number,
 }
+local ALL: "All" = "All"
 -- Signals
 local onActivePlayerAdded
 local onActivePlayerRemoved
@@ -122,15 +123,26 @@ local function fireRemoteSignalForReplica(self: Replica, signal: any, inclusion:
 			if not activePlayers[player] then
 				return false
 			end
-			return if inclusion ~= nil and inclusion[player] ~= nil then inclusion[player] or false else true
+			if inclusion ~= nil then
+				if inclusion[player] ~= nil then
+					return inclusion[player] :: boolean
+				elseif inclusion[ALL] ~= nil then
+					return inclusion[ALL] :: boolean
+				end
+			end
+			return true
 		end, self.Id, ...)
 	else
 		signal:FireFilter(function(player: Player)
 			if not activePlayers[player] then
 				return false
 			end
-			if inclusion ~= nil and inclusion[player] ~= nil then
-				return inclusion[player] or false
+			if inclusion ~= nil then
+				if inclusion[player] ~= nil then
+					return inclusion[player] :: boolean
+				elseif inclusion[ALL] ~= nil then
+					return inclusion[ALL] :: boolean
+				end
 			end
 			if replicationFilter == FILTER.Include then
 				return self:GetFilterList()[player] ~= nil
