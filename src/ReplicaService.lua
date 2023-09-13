@@ -57,6 +57,8 @@ local FILTER: {
 	Exclude: number,
 }
 local ALL: "All" = "All"
+local INCLUDE: "Include" = "Include"
+local EXCLUDE: "Exclude" = "Exclude"
 -- Signals
 local onActivePlayerAdded
 local onActivePlayerRemoved
@@ -914,6 +916,9 @@ end
 	@field WriteLib any? -- The write library to create the Replica with. Default: nil
 ]=]
 local ReplicaService = {}
+ReplicaService.ALL = ALL
+ReplicaService.INCLUDE = INCLUDE
+ReplicaService.EXCLUDE = EXCLUDE
 
 --[=[
 	@method ActivePlayers
