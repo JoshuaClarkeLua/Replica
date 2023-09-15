@@ -559,7 +559,15 @@ end
 ]=]
 function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: Inclusion?): ()
 	onSetValues(self, path, values)
-	fireRemoteSignalForReplica(self, rep_SetValues, inclusion, path, values)
+	local nilKeys = {}
+	local _values = table.clone(values)
+	for key, value in pairs(_values) do
+		if value == Common.NIL then
+			table.insert(nilKeys, key)
+			_values[key] = nil
+		end
+	end
+	fireRemoteSignalForReplica(self, rep_SetValues, inclusion, path, _values, nilKeys)
 end
 
 --[=[

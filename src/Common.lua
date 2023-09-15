@@ -100,6 +100,7 @@ local SIGNAL = {
 	OnArrayRemove = 6,
 	OnChildAdded = 7,
 }
+Common.NIL = {}
 
 
 local function getPathTable(path: Path): PathTable
@@ -328,14 +329,25 @@ function Common.onSetValue(self: any, path: Path, value: any): ()
 	end
 end
 
-function Common.onSetValues(self: any, path: Path, values: { [PathIndex]: any }): ()
+function Common.onSetValues(self: any, path: Path, values: { [PathIndex]: any }, nilKeys: { PathIndex }?): ()
 	local pathTable = getPathTable(path)
 	local pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, pathTable)
 	pathTable[#pathTable + 1] = index
 	for key, value in pairs(values) do
+		if value == Common.NIL then
+			value = nil
+		end
 		local success = Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, value)
 		if not success then
 			values[key] = nil
+		end
+	end
+	if nilKeys ~= nil and #nilKeys > 0 then
+		for _, key in ipairs(nilKeys) do
+			local success = Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, nil)
+			if success then
+				values[key] = Common.NIL
+			end
 		end
 	end
 	if next(values) ~= nil then

@@ -10,4 +10,6 @@ export type Inclusion = Service.Inclusion
 return {
 	Controller = Controller,
 	Service = Service,
+	--
+	NIL = Common.NIL,
 }
