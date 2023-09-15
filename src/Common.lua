@@ -37,6 +37,7 @@ export type Replica = {
 	-- Listeners
 	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection?,
 	OnChange: (self: Replica, path: Path, listener: (new: any, old: any) -> ()) -> Connection,
+	OnValuesChanged: (self: Replica, path: Path, listener: (new: {[PathIndex]: any}, old: {[PathIndex]: any}) -> ()) -> Connection,
 	OnNewKey: (self: Replica, path: Path?, listener: (key: any, value: any) -> ()) -> Connection,
 	OnArrayInsert: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnArraySet: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,

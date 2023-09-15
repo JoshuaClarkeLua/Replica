@@ -636,6 +636,21 @@ function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> (
 end
 
 --[=[
+	@method OnValuesChanged
+	@within Replica
+	@tag Shared
+
+	Listens for SetValues changes at a path.
+
+	@param path Path? -- The path to listen for SetValues changes at.
+	@param listener (new: { [PathIndex]: any }, old: { [PathIndex]: any }) -> () -- The function to call when the values at the path change.
+	@return Connection -- Signal Connection
+]=]
+function Replica:OnValuesChanged(path: Common.Path, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
+	return connectReplicaSignal(self, Common.SIGNAL.OnValuesChanged, path, listener)
+end
+
+--[=[
 	@method OnNewKey
 	@within Replica
 	@tag Shared
