@@ -178,6 +178,10 @@ function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> (
 	return connectReplicaSignal(self, Common.SIGNAL.OnChange, path, listener)
 end
 
+function Replica:OnValuesChanged(path: Common.Path, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
+	return connectReplicaSignal(self, Common.SIGNAL.OnValuesChanged, path, listener)
+end
+
 function Replica:OnNewKey(path: Common.Path?, listener: (key: any, value: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnNewKey, path, listener)
 end

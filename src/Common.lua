@@ -99,6 +99,7 @@ local SIGNAL = {
 	OnArraySet = 5,
 	OnArrayRemove = 6,
 	OnChildAdded = 7,
+	OnValuesChanged = 8,
 }
 Common.NIL = {}
 
@@ -304,7 +305,7 @@ local function _newKeyRecursive(self: any, pathTable, _pointer, i): ()
 	fireReplicaSignal(self, SIGNAL.OnNewKey, pathTable, newKey, newValue)
 end
 
-function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any): boolean
+function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any): (boolean, any)
 	local old = pointer[index]
 	if old == value then return false end
 	pointer[index] = value
@@ -317,7 +318,7 @@ function Common._onSetValue(self: any, pathTable: PathTable, newKeyIndex: number
 		end
 		_newKeyRecursive(self, table.clone(pathTable), _pointer, _newKeyIndex)
 	end
-	return true
+	return true, old
 end
 
 function Common.onSetValue(self: any, path: Path, value: any): ()
@@ -333,24 +334,29 @@ function Common.onSetValues(self: any, path: Path, values: { [PathIndex]: any },
 	local pathTable = getPathTable(path)
 	local pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, pathTable)
 	pathTable[#pathTable + 1] = index
+	local oldValues = {}
 	for key, value in pairs(values) do
 		if value == Common.NIL then
 			value = nil
 		end
-		local success = Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, value)
+		local success, old = Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, value)
 		if not success then
 			values[key] = nil
+		else
+			oldValues[key] = old
 		end
 	end
 	if nilKeys ~= nil and #nilKeys > 0 then
 		for _, key in ipairs(nilKeys) do
-			local success = Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, nil)
+			local success, old = Common._onSetValue(self, pathTable, newKeyIndex, pointer[index], key, nil)
 			if success then
 				values[key] = Common.NIL
+				oldValues[key] = old
 			end
 		end
 	end
 	if next(values) ~= nil then
+		fireReplicaSignal(self, SIGNAL.OnValuesChanged, pathTable, values, oldValues)
 		fireReplicaSignal(self, SIGNAL.OnRawChange, pathTable, "SetValues", pathTable, values)
 	end
 end
