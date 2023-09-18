@@ -19,9 +19,9 @@ type Value<T> = Fusion.Value<T>
 type Signal = Common.Signal
 type Connection = Common.Connection
 
-export type FilterName = "All" | "Include" | "Exclude"
-export type Filter = number
-export type Inclusion = { [Player | "All"]: boolean? }
+type FilterName = Common.FilterName
+type Filter = Common.Filter
+type Inclusion = Common.Inclusion
 
 export type ReplicaProps = {
 	Token: ReplicaToken,

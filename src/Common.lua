@@ -14,6 +14,7 @@ export type Path = string | PathTable
 export type PathIndex = string | number
 export type FilterName = "All" | "Include" | "Exclude"
 export type Filter = number
+export type Inclusion = { [Player | "All"]: boolean? }
 export type Replica = {
 	Id: string,
 	Tags: {[any]: any},
@@ -29,11 +30,11 @@ export type Replica = {
 	GetParent: (self: Replica) -> Replica?,
 	GetChildren: (self: Replica) -> {[Replica]: true},
 	-- Mutators
-	SetValue: (self: Replica, path: Path, value: any, inclusion: {[Player]: boolean}?) -> (),
-	SetValues: (self: Replica, path: Path, values: {[PathIndex]: any}, inclusion: {[Player]: boolean}?) -> (),
-	ArrayInsert: (self: Replica, path: Path, value: any, index: number?, inclusion: {[Player]: boolean}?) -> (),
-	ArraySet: (self: Replica, path: Path, index: number, value: any, inclusion: {[Player]: boolean}?) -> (),
-	ArrayRemove: (self: Replica, path: Path, index: number, inclusion: {[Player]: boolean}?) -> (),
+	SetValue: (self: Replica, path: Path, value: any, inclusion: Inclusion?) -> (),
+	SetValues: (self: Replica, path: Path, values: {[PathIndex]: any}, inclusion: Inclusion?) -> (),
+	ArrayInsert: (self: Replica, path: Path, value: any, index: number?, inclusion: Inclusion?) -> (),
+	ArraySet: (self: Replica, path: Path, index: number, value: any, inclusion: Inclusion?) -> (),
+	ArrayRemove: (self: Replica, path: Path, index: number, inclusion: Inclusion?) -> (),
 	-- Listeners
 	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection?,
 	OnChange: (self: Replica, path: Path, listener: (new: any, old: any) -> ()) -> Connection,
