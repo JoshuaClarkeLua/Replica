@@ -244,7 +244,7 @@ local function updateReplication(
 	oldPlayers: { [Player]: true },
 	newFilter: Filter,
 	newPlayers: { [Player]: true }
-): Inclusion -- { [Player]: true } = Created, { [Player]: false } = Destroyed
+): { [Player]: boolean? } -- { [Player]: true } = Created, { [Player]: false } = Destroyed
 	local changeList = {}
 	if self._parent == nil then
 		self._filter = newFilter
