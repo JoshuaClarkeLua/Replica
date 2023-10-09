@@ -944,20 +944,6 @@ ReplicaService.INCLUDE = INCLUDE
 ReplicaService.EXCLUDE = EXCLUDE
 
 --[=[
-	@method ActivePlayers
-	@within ReplicaService
-	@server
-
-	@return { [Player]: true } -- A list of active players.
-]=]
-function ReplicaService:ActivePlayers()
-	if not RunService:IsServer() then
-		error("ReplicaService:ActivePlayers() can only be called on the server")
-	end
-	return activePlayers
-end
-
---[=[
 	@method ObserveActivePlayers
 	@within ReplicaService
 	@server
@@ -968,9 +954,6 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function ReplicaService:ObserveActivePlayers(observer: (player: Player) -> ())
-	if not RunService:IsServer() then
-		error("ReplicaService:ObserveActivePlayers() can only be called on the server")
-	end
 	for player in pairs(activePlayers) do
 		task.spawn(observer, player)
 	end
@@ -988,9 +971,6 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function ReplicaService:OnActivePlayerRemoved(listener: (player: Player) -> ())
-	if not RunService:IsServer() then
-		error("ReplicaService:OnActivePlayerRemoved() can only be called on the server")
-	end
 	return onActivePlayerRemoved:Connect(listener)
 end
 
@@ -1004,19 +984,17 @@ end
 	@param name string -- The name of the ReplicaToken.
 	@return ReplicaToken -- The ReplicaToken.
 ]=]
+local ReplicaToken = {
+	__ClassName = "ReplicaToken",
+	__tostring = function(self)
+		return self.name
+	end,
+}
 function ReplicaService:RegisterToken(name: string): ReplicaToken
-	if not RunService:IsServer() then
-		error("ReplicaService:RegisterToken() can only be called on the server")
-	end
 	assert(replicaTokens[name] == nil, `ReplicaToken "{name}" already exists!`)
 	local token = setmetatable({
-		__ClassName = "ReplicaToken",
 		name = name,
-	}, {
-		__tostring = function(self)
-			return self.name
-		end,
-	})
+	}, ReplicaToken)
 	replicaTokens[name] = token
 	return token
 end
@@ -1033,9 +1011,6 @@ export type ReplicaToken = typeof(ReplicaService:RegisterToken(...))
 	@return Replica -- The Replica.
 ]=]
 function ReplicaService:NewReplica(props: ReplicaProps)
-	if not RunService:IsServer() then
-		error("ReplicaService:NewReplica() can only be called on the server")
-	end
 	return Replica.new(props)
 end
 
@@ -1050,9 +1025,6 @@ end
 	@return Replica? -- Replica
 ]=]
 function ReplicaService:GetReplicaById(id: string): Replica?
-	if not RunService:IsServer() then
-		error("ReplicaService:GetReplicaById() can only be called on the server!")
-	end
 	return replicas[id]
 end
 
@@ -1073,6 +1045,7 @@ if RunService:IsServer() then
 	rep_Destroy = comm:CreateSignal("Destroy") -- (id: string)
 	--
 	activePlayers = {}
+	ReplicaService.ActivePlayers = activePlayers
 	replicaTokens = {}
 	replicas = {}
 	FILTER = {

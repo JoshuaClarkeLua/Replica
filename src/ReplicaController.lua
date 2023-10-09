@@ -341,16 +341,17 @@ end
 	Requests the initial data from the server.
 ]=]
 function ReplicaController:RequestData(): ()
-	if not RunService:IsClient() then
-		error("ReplicaController:RequestData() can only be called on the client!")
-	end
 	local conn
 	conn = requestData:Connect(function(data)
+		ReplicaController.InitialDataReceived = true
 		for id, rootReplica: {any} in pairs(data) do
 			Replica.new(id, rootReplica[1], rootReplica[2], rootReplica[3], rootReplica[4])
 		end
 		conn:Disconnect()
 		requestData:Destroy()
+		onInitDataReceived:Fire()
+		onInitDataReceived:Destroy()
+		onInitDataReceived = nil
 	end)
 	requestData:Fire()
 end
@@ -366,9 +367,6 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function ReplicaController:OnNewReplica(listener: (replica: Replica) -> ())
-	if not RunService:IsClient() then
-		error("ReplicaController:OnNewReplica() can only be called on the client!")
-	end
 	return onReplicaCreated:Connect(listener)
 end
 
@@ -384,9 +382,6 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function ReplicaController:OnNewReplicaWithToken(token: string, listener: (replica: Replica) -> ())
-	if not RunService:IsClient() then
-		error("ReplicaController:OnNewReplicaWithToken() can only be called on the client!")
-	end
 	return getNewReplicaSignalForToken(token):Connect(listener)
 end
 
@@ -400,16 +395,12 @@ end
 	@param listener () -> () -- Callback function
 	@return Connection -- Signal Connection
 ]=]
-function ReplicaController:OnInitialDataReceived(listener: () -> ()): any
-	if not RunService:IsClient() then
-		error("ReplicaController:OnInitialDataReceived() can only be called on the client!")
-	end
+function ReplicaController:OnInitialDataReceived(listener: () -> ()): ()
 	if ReplicaController.InitialDataReceived then
 		task.spawn(listener)
 	else
-		return onInitDataReceived:Connect(listener)
+		onInitDataReceived:Connect(listener)
 	end
-	return
 end
 
 --[=[
@@ -423,9 +414,6 @@ end
 	@return Replica? -- Replica
 ]=]
 function ReplicaController:GetReplicaById(id: string): Replica?
-	if not RunService:IsClient() then
-		error("ReplicaController:GetReplicaById() can only be called on the client!")
-	end
 	return replicas[id]
 end
 
