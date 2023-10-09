@@ -95,5 +95,7 @@ end
 Replica.Controller = Controller
 Replica.Service = Service
 Replica.NIL = Common.NIL
-Replica.TEMP = Common.TEMP
+if RunService:IsServer() then
+	Replica.TEMP = Service.Temporary
+end
 return Replica

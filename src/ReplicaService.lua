@@ -427,7 +427,7 @@ function Replica.new(props: ReplicaProps): Replica
 		-- Data
 		Tags = (props.Tags or {}) :: { [any]: any },
 		Data = (props.Data or {}) :: { [any]: any },
-		_parent = props.Parent == Common.TEMP and TempReplica or props.Parent,
+		_parent = props.Parent,
 		-- Replication
 		_filter = props.Parent == nil and replicationFilter or nil,
 		_filterList = props.Parent == nil and filterList or nil,
