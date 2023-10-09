@@ -104,6 +104,7 @@ local SIGNAL = {
 	OnValuesChanged = 8,
 }
 Common.NIL = {}
+Common.TEMP = {} :: Replica
 
 
 local function getPathTable(path: Path): PathTable

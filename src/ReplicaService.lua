@@ -59,6 +59,7 @@ local FILTER: {
 local ALL: "All" = "All"
 local INCLUDE: "Include" = "Include"
 local EXCLUDE: "Exclude" = "Exclude"
+local TempReplica: Replica
 -- Signals
 local onActivePlayerAdded
 local onActivePlayerRemoved
@@ -426,7 +427,7 @@ function Replica.new(props: ReplicaProps): Replica
 		-- Data
 		Tags = (props.Tags or {}) :: { [any]: any },
 		Data = (props.Data or {}) :: { [any]: any },
-		_parent = props.Parent,
+		_parent = props.Parent == Common.TEMP and TempReplica or props.Parent,
 		-- Replication
 		_filter = props.Parent == nil and replicationFilter or nil,
 		_filterList = props.Parent == nil and filterList or nil,
@@ -1058,11 +1059,12 @@ if RunService:IsServer() then
 	onActivePlayerAdded = Signal.new() -- (player: Player) -> ()
 	onActivePlayerRemoved = Signal.new() -- (player: Player) -> ()
 	--
-	ReplicaService.Temporary = Replica.new({
+	TempReplica = Replica.new({
 		Token = ReplicaService:RegisterToken(HttpService:GenerateGUID(false)),
 		Filter = "Include",
 		FilterList = {},
 	})
+	ReplicaService.Temporary = TempReplica
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 	requestData:Connect(onPlayerRequestData)
 end

@@ -95,4 +95,5 @@ end
 Replica.Controller = Controller
 Replica.Service = Service
 Replica.NIL = Common.NIL
+Replica.TEMP = Common.TEMP
 return Replica
