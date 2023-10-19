@@ -380,6 +380,7 @@ local function onPlayerRemoving(player: Player): ()
 			replica._filterList[player] = nil
 		end
 	end
+	onActivePlayerRemoved:Fire(player)
 end
 
 local function onPlayerRequestData(player: Player): ()
@@ -400,6 +401,7 @@ local function onPlayerRequestData(player: Player): ()
 		end
 	end
 	requestData:Fire(player, data)
+	onActivePlayerAdded:Fire(player)
 end
 
 --[=[
