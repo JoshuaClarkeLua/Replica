@@ -166,7 +166,7 @@ local function getTableFromPathTable(data: {[any]: any}, create: boolean?, max: 
 		end
 		pointer = pointer[key]
 		i += 1
-		if i == max then
+		if max and i > max then
 			break
 		end
 		key = select(i, ...)
@@ -232,7 +232,7 @@ end
 local function getSignalTable(self: any, max: number?, ...: PathIndex)
 	if self._signals ~= nil then
 		local pointer = self._signals
-		if select('#', ...) ~= 0 then
+		if (not max or max > 0) and select('#', ...) ~= 0 then
 			pointer = getTableFromPathTable(self._signals, false, max, ...)
 		end
 		return pointer
@@ -429,7 +429,7 @@ function Common.onArrayRemove(self: any, path: Path, index: number): ()
 end
 
 function Common.onSetParent(self: any, parent): ()
-	fireReplicaSignal(parent, SIGNAL.OnChildAdded, getSignalTable(self), self)
+	fireReplicaSignal(parent, SIGNAL.OnChildAdded, getSignalTable(parent), self)
 end
 
 function Common.observeState(self: any, path: Path, valueObject: Value<any>): Connection
