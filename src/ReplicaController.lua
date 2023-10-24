@@ -198,6 +198,10 @@ function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, valu
 	return connectReplicaSignal(self, Common.SIGNAL.OnArrayRemove, path, listener)
 end
 
+function Replica:OnKeyChanged(path: Common.Path, listener: (key: any, new: any, old: any) -> ())
+	return connectReplicaSignal(self, Common.SIGNAL.OnKeyChanged, path, listener)
+end
+
 function Replica:OnRawChange(path: Common.Path?, listener: (actionName: string, pathTable: Common.PathTable, ...any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnRawChange, path, listener)
 end

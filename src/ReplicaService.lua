@@ -714,6 +714,21 @@ function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, valu
 end
 
 --[=[
+	@method OnKeyChanged
+	@within Replica
+	@tag Shared
+
+	Listens for key changes at a path.
+
+	@param path Path? -- The path to listen for key changes at.
+	@param listener (key: any, new: any, old: any) -> () -- The function to call when a key changes at the path.
+	@return Connection -- Signal Connection
+]=]
+function Replica:OnKeyChanged(path: Common.Path, listener: (key: any, new: any, old: any) -> ())
+	return connectReplicaSignal(self, Common.SIGNAL.OnKeyChanged, path, listener)
+end
+
+--[=[
 	@method OnRawChange
 	@within Replica
 	@tag Shared
