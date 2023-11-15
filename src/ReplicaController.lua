@@ -305,12 +305,12 @@ end
 export type Replica = Common.Replica
 
 
---[=[
+--[[
 	@class ReplicaController
 	@client
 
 	Manages the replication of Replicas to clients.
-]=]
+]]
 local ReplicaController = {}
 ReplicaController.InitialDataReceived = false
 
@@ -337,13 +337,6 @@ local function getNewReplicaSignalForToken(token: string): Signal
 	return signal
 end
 
---[=[
-	@method RequestData
-	@within ReplicaController
-	@client
-
-	Requests the initial data from the server.
-]=]
 function ReplicaController:RequestData(): ()
 	local conn
 	conn = requestData:Connect(function(data)
@@ -360,45 +353,14 @@ function ReplicaController:RequestData(): ()
 	requestData:Fire()
 end
 
---[=[
-	@method OnNewReplica
-	@within ReplicaController
-	@client
-
-	Calls listener when a new Replica is created.
-
-	@param listener (replica: Replica) -> () -- Callback function
-	@return Connection -- Signal Connection
-]=]
 function ReplicaController:OnNewReplica(listener: (replica: Replica) -> ())
 	return onReplicaCreated:Connect(listener)
 end
 
---[=[
-	@method OnNewReplicaWithToken
-	@within ReplicaController
-	@client
-
-	Calls listener when a new Replica with the specified token is created.
-
-	@param token string -- Replica token name
-	@param listener (replica: Replica) -> () -- Callback function
-	@return Connection -- Signal Connection
-]=]
 function ReplicaController:OnNewReplicaWithToken(token: string, listener: (replica: Replica) -> ())
 	return getNewReplicaSignalForToken(token):Connect(listener)
 end
 
---[=[
-	@method OnInitialDataReceived
-	@within ReplicaController
-	@client
-
-	Calls listener when the initial data has been received from the server.
-
-	@param listener () -> () -- Callback function
-	@return Connection -- Signal Connection
-]=]
 function ReplicaController:OnInitialDataReceived(listener: () -> ()): ()
 	if ReplicaController.InitialDataReceived then
 		task.spawn(listener)
@@ -407,16 +369,6 @@ function ReplicaController:OnInitialDataReceived(listener: () -> ()): ()
 	end
 end
 
---[=[
-	@method GetReplicaById
-	@within ReplicaController
-	@client
-
-	Returns the Replica with the specified id.
-
-	@param id string -- Replica id
-	@return Replica? -- Replica
-]=]
 function ReplicaController:GetReplicaById(id: string): Replica?
 	return replicas[id]
 end

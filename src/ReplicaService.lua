@@ -73,21 +73,24 @@ local onActivePlayerRemoved
 	@prop Id string
 	@within Replica
 	@readonly
-	@tag Shared
+	@server
+	@client
 
 	The Replica's unique identifier.
 ]=]
 --[=[
 	@prop Tags { [string]: any }
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	The Replica's tags.
 ]=]
 --[=[
 	@prop Data { [string]: any }
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	The Replica's data.
 ]=]
@@ -471,7 +474,8 @@ export type Replica = Common.Replica
 --[=[
 	@method IsActive
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Returns whether the Replica is active or not.
 
@@ -484,7 +488,8 @@ end
 --[=[
 	@method Identify
 	@within Replica
-	@tag Shared
+	@server
+	@client
 	
 	Returns a string that identifies the Replica.
 
@@ -497,7 +502,8 @@ end
 --[=[
 	@method GetToken
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Returns the Replica's Token name.
 
@@ -510,7 +516,8 @@ end
 --[=[
 	@method GetParent
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Returns the Replica's parent.
 
@@ -523,7 +530,8 @@ end
 --[=[
 	@method GetChildren
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Returns the Replica's children.
 
@@ -536,7 +544,8 @@ end
 --[=[
 	@method SetValue
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Sets a value at a path.
 
@@ -552,7 +561,8 @@ end
 --[=[
 	@method SetValues
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Sets multiple values at a path.
 
@@ -576,7 +586,8 @@ end
 --[=[
 	@method ArrayInsert
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Inserts a value into an array at a path.
 
@@ -593,7 +604,8 @@ end
 --[=[
 	@method ArraySet
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Sets a value in an array at a path.
 
@@ -610,7 +622,8 @@ end
 --[=[
 	@method ArrayRemove
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Removes a value from an array at a path.
 
@@ -626,7 +639,8 @@ end
 --[=[
 	@method OnChange
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for value changes at a path.
 
@@ -641,7 +655,8 @@ end
 --[=[
 	@method OnValuesChanged
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for SetValues changes at a path.
 
@@ -656,7 +671,8 @@ end
 --[=[
 	@method OnNewKey
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for new keys at a path.
 
@@ -671,7 +687,8 @@ end
 --[=[
 	@method OnArrayInsert
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for array inserts at a path.
 
@@ -686,7 +703,8 @@ end
 --[=[
 	@method OnArraySet
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for array sets at a path.
 
@@ -701,7 +719,8 @@ end
 --[=[
 	@method OnArrayRemove
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for array removes at a path.
 
@@ -716,7 +735,8 @@ end
 --[=[
 	@method OnKeyChanged
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for key changes at a path.
 
@@ -731,7 +751,8 @@ end
 --[=[
 	@method OnRawChange
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for raw changes at a path.
 
@@ -746,7 +767,8 @@ end
 --[=[
 	@method OnChildAdded
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for child Replicas being added.
 
@@ -760,6 +782,8 @@ end
 --[=[
 	@method ObserveState
 	@within Replica
+	@server
+	@client
 
 	Observes the value at the specified path and sets it as the value of the Fusion Value object.
 
@@ -774,7 +798,8 @@ end
 --[=[
 	@method OnChildRemoved
 	@within Replica
-	@tag Shared
+	@server
+	@client
 
 	Listens for child Replicas being removed.
 
@@ -934,12 +959,12 @@ function Replica:GetFilter(): Filter
 	return self._filter or self._parent:GetFilter()
 end
 
---[=[
+--[[
 	@class ReplicaService
 	@server
 	
 	Manages the replication of Replicas to clients.
-]=]
+]]
 --[=[
 	@class ReplicaToken
 
@@ -947,7 +972,7 @@ end
 ]=]
 --[=[
 	@interface ReplicaProps
-	@within ReplicaService
+	@within ReplicaModule
 	@field Token ReplicaToken -- The ReplicaToken to create the Replica with.
 	@field Tags { [string]: any }? -- The tags to create the Replica with. Default: {}
 	@field Data { [string]: any }? -- The data to create the Replica with. Default: {}
@@ -961,16 +986,7 @@ ReplicaService.ALL = ALL
 ReplicaService.INCLUDE = INCLUDE
 ReplicaService.EXCLUDE = EXCLUDE
 
---[=[
-	@method ObserveActivePlayers
-	@within ReplicaService
-	@server
 
-	Calls observer for current active players and whenever a player is added to the active players list.
-
-	@param observer (player: Player) -> () -- The function to call when a player is added to the active players list.
-	@return Connection -- Signal Connection
-]=]
 function ReplicaService:ObserveActivePlayers(observer: (player: Player) -> ())
 	for player in pairs(activePlayers) do
 		task.spawn(observer, player)
@@ -978,30 +994,11 @@ function ReplicaService:ObserveActivePlayers(observer: (player: Player) -> ())
 	return onActivePlayerAdded:Connect(observer)
 end
 
---[=[
-	@method OnActivePlayerRemoved
-	@within ReplicaService
-	@server
 
-	Calls listener whenever a player is removed from the active players list.
-
-	@param listener (player: Player) -> () -- The function to call when a player is removed from the active players list.
-	@return Connection -- Signal Connection
-]=]
 function ReplicaService:OnActivePlayerRemoved(listener: (player: Player) -> ())
 	return onActivePlayerRemoved:Connect(listener)
 end
 
---[=[
-	@method RegisterToken
-	@within ReplicaService
-	@server
-
-	Creates a new ReplicaToken.
-
-	@param name string -- The name of the ReplicaToken.
-	@return ReplicaToken -- The ReplicaToken.
-]=]
 local ReplicaToken = {
 	__ClassName = "ReplicaToken",
 	__tostring = function(self)
@@ -1018,30 +1015,10 @@ function ReplicaService:RegisterToken(name: string): ReplicaToken
 end
 export type ReplicaToken = typeof(ReplicaService:RegisterToken(...))
 
---[=[
-	@method NewReplica
-	@within ReplicaService
-	@server
-
-	Creates a new Replica.
-
-	@param props ReplicaProps -- The properties to create the Replica with.
-	@return Replica -- The Replica.
-]=]
 function ReplicaService:NewReplica(props: ReplicaProps)
 	return Replica.new(props)
 end
 
---[=[
-	@method GetReplicaById
-	@within ReplicaService
-	@server
-
-	Returns the Replica with the specified id.
-
-	@param id string -- Replica id
-	@return Replica? -- Replica
-]=]
 function ReplicaService:GetReplicaById(id: string): Replica?
 	return replicas[id]
 end
