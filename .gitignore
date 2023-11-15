@@ -21,6 +21,7 @@ sourcemap.json
 
 # moonwave website
 build/
+docs/
 
 #node modules
 node_modules/
