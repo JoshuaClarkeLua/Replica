@@ -19,8 +19,9 @@ type Value<T> = Fusion.Value<T>
 type Signal = Common.Signal
 type Connection = Common.Connection
 
-export type FilterName = "All" | "Include" | "Exclude"
-export type Filter = number
+type FilterName = Common.FilterName
+type Filter = Common.Filter
+type Inclusion = Common.Inclusion
 
 export type ReplicaProps = {
 	Token: ReplicaToken,
@@ -55,6 +56,10 @@ local FILTER: {
 	Include: number,
 	Exclude: number,
 }
+local ALL: "All" = "All"
+local INCLUDE: "Include" = "Include"
+local EXCLUDE: "Exclude" = "Exclude"
+local TempReplica: Replica
 -- Signals
 local onActivePlayerAdded
 local onActivePlayerRemoved
@@ -114,22 +119,33 @@ local _onSetParent = Common.onSetParent
 local identify = Common.identify
 
 
-local function fireRemoteSignalForReplica(self: Replica, signal: any, inclusion: { [Player]: boolean }?, ...: any): ()
+local function fireRemoteSignalForReplica(self: Replica, signal: any, inclusion: Inclusion?, ...: any): ()
 	local replicationFilter = self:GetFilter()
 	if replicationFilter == FILTER.All then
 		signal:FireFilter(function(player: Player)
 			if not activePlayers[player] then
 				return false
 			end
-			return if inclusion ~= nil and inclusion[player] ~= nil then inclusion[player] else true
+			if inclusion ~= nil then
+				if inclusion[player] ~= nil then
+					return inclusion[player] :: boolean
+				elseif inclusion[ALL] ~= nil then
+					return inclusion[ALL] :: boolean
+				end
+			end
+			return true
 		end, self.Id, ...)
 	else
 		signal:FireFilter(function(player: Player)
 			if not activePlayers[player] then
 				return false
 			end
-			if inclusion ~= nil and inclusion[player] ~= nil then
-				return inclusion[player]
+			if inclusion ~= nil then
+				if inclusion[player] ~= nil then
+					return inclusion[player] :: boolean
+				elseif inclusion[ALL] ~= nil then
+					return inclusion[ALL] :: boolean
+				end
 			end
 			if replicationFilter == FILTER.Include then
 				return self:GetFilterList()[player] ~= nil
@@ -229,7 +245,7 @@ local function updateReplication(
 	oldPlayers: { [Player]: true },
 	newFilter: Filter,
 	newPlayers: { [Player]: true }
-): { [Player]: boolean }
+): { [Player]: boolean? } -- { [Player]: true } = Created, { [Player]: false } = Destroyed
 	local changeList = {}
 	if self._parent == nil then
 		self._filter = newFilter
@@ -314,7 +330,7 @@ local function setParent(self: Replica, parent: Replica): ()
 
 	local inclusion = updateReplication(self, oldFilter, oldPlayers, newFilter, newPlayers)
 	for player, change in pairs(inclusion) do
-		inclusion[player] = not change
+		inclusion[player] = change or nil
 	end
 	fireRemoteSignalForReplica(self, rep_SetParent, inclusion, parent.Id)
 end
@@ -364,6 +380,7 @@ local function onPlayerRemoving(player: Player): ()
 			replica._filterList[player] = nil
 		end
 	end
+	onActivePlayerRemoved:Fire(player)
 end
 
 local function onPlayerRequestData(player: Player): ()
@@ -384,6 +401,7 @@ local function onPlayerRequestData(player: Player): ()
 		end
 	end
 	requestData:Fire(player, data)
+	onActivePlayerAdded:Fire(player)
 end
 
 --[=[
@@ -524,9 +542,9 @@ end
 
 	@param path Path -- The path to set the value at.
 	@param value any -- The value to set.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:SetValue(path: Common.Path, value: any, inclusion: { [Player]: boolean }?): ()
+function Replica:SetValue(path: Common.Path, value: any, inclusion: Inclusion?): ()
 	onSetValue(self, path, value)
 	fireRemoteSignalForReplica(self, rep_SetValue, inclusion, path, value)
 end
@@ -540,11 +558,19 @@ end
 
 	@param path Path -- The path to set the values at.
 	@param values { [PathIndex]: any } -- The values to set.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: { [Player]: boolean }?): ()
+function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: Inclusion?): ()
 	onSetValues(self, path, values)
-	fireRemoteSignalForReplica(self, rep_SetValues, inclusion, path, values)
+	local nilKeys = {}
+	local _values = table.clone(values)
+	for key, value in pairs(_values) do
+		if value == Common.NIL then
+			table.insert(nilKeys, key)
+			_values[key] = nil
+		end
+	end
+	fireRemoteSignalForReplica(self, rep_SetValues, inclusion, path, _values, nilKeys)
 end
 
 --[=[
@@ -557,9 +583,9 @@ end
 	@param path Path -- The path to insert the value at.
 	@param value any -- The value to insert.
 	@param index number? -- The index to insert the value at. If nil, the value will be inserted at the end of the array.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:ArrayInsert(path: Common.Path, value: any, index: number?, inclusion: { [Player]: boolean }?): ()
+function Replica:ArrayInsert(path: Common.Path, value: any, index: number?, inclusion: Inclusion?): ()
 	local _index = onArrayInsert(self, path, index, value)
 	fireRemoteSignalForReplica(self, rep_ArrayInsert, inclusion, path, _index, value)
 end
@@ -574,9 +600,9 @@ end
 	@param path Path -- The path to set the value at.
 	@param index number -- The index to set the value at.
 	@param value any -- The value to set.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:ArraySet(path: Common.Path, index: number, value: any, inclusion: { [Player]: boolean }?): ()
+function Replica:ArraySet(path: Common.Path, index: number, value: any, inclusion: Inclusion?): ()
 	onArraySet(self, path, index, value)
 	fireRemoteSignalForReplica(self, rep_ArraySet, inclusion, path, index, value)
 end
@@ -590,9 +616,9 @@ end
 
 	@param path Path -- The path to remove the value from.
 	@param index number -- The index to remove the value from.
-	@param inclusion { [Player]: boolean }? -- Overrides the Replica's filtering settings for this call.
+	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: { [Player]: boolean }?): ()
+function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: Inclusion?): ()
 	onArrayRemove(self, path, index)
 	fireRemoteSignalForReplica(self, rep_ArrayRemove, inclusion, path, index)
 end
@@ -610,6 +636,21 @@ end
 ]=]
 function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnChange, path, listener)
+end
+
+--[=[
+	@method OnValuesChanged
+	@within Replica
+	@tag Shared
+
+	Listens for SetValues changes at a path.
+
+	@param path Path? -- The path to listen for SetValues changes at.
+	@param listener (new: { [PathIndex]: any }, old: { [PathIndex]: any }) -> () -- The function to call when the values at the path change.
+	@return Connection -- Signal Connection
+]=]
+function Replica:OnValuesChanged(path: Common.Path, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
+	return connectReplicaSignal(self, Common.SIGNAL.OnValuesChanged, path, listener)
 end
 
 --[=[
@@ -670,6 +711,21 @@ end
 ]=]
 function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, value: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnArrayRemove, path, listener)
+end
+
+--[=[
+	@method OnKeyChanged
+	@within Replica
+	@tag Shared
+
+	Listens for key changes at a path.
+
+	@param path Path? -- The path to listen for key changes at.
+	@param listener (key: any, new: any, old: any) -> () -- The function to call when a key changes at the path.
+	@return Connection -- Signal Connection
+]=]
+function Replica:OnKeyChanged(path: Common.Path, listener: (key: any, new: any, old: any) -> ())
+	return connectReplicaSignal(self, Common.SIGNAL.OnKeyChanged, path, listener)
 end
 
 --[=[
@@ -901,20 +957,9 @@ end
 	@field WriteLib any? -- The write library to create the Replica with. Default: nil
 ]=]
 local ReplicaService = {}
-
---[=[
-	@method ActivePlayers
-	@within ReplicaService
-	@server
-
-	@return { [Player]: true } -- A list of active players.
-]=]
-function ReplicaService:ActivePlayers()
-	if not RunService:IsServer() then
-		error("ReplicaService:ActivePlayers() can only be called on the server")
-	end
-	return activePlayers
-end
+ReplicaService.ALL = ALL
+ReplicaService.INCLUDE = INCLUDE
+ReplicaService.EXCLUDE = EXCLUDE
 
 --[=[
 	@method ObserveActivePlayers
@@ -927,9 +972,6 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function ReplicaService:ObserveActivePlayers(observer: (player: Player) -> ())
-	if not RunService:IsServer() then
-		error("ReplicaService:ObserveActivePlayers() can only be called on the server")
-	end
 	for player in pairs(activePlayers) do
 		task.spawn(observer, player)
 	end
@@ -947,9 +989,6 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function ReplicaService:OnActivePlayerRemoved(listener: (player: Player) -> ())
-	if not RunService:IsServer() then
-		error("ReplicaService:OnActivePlayerRemoved() can only be called on the server")
-	end
 	return onActivePlayerRemoved:Connect(listener)
 end
 
@@ -963,19 +1002,17 @@ end
 	@param name string -- The name of the ReplicaToken.
 	@return ReplicaToken -- The ReplicaToken.
 ]=]
+local ReplicaToken = {
+	__ClassName = "ReplicaToken",
+	__tostring = function(self)
+		return self.name
+	end,
+}
 function ReplicaService:RegisterToken(name: string): ReplicaToken
-	if not RunService:IsServer() then
-		error("ReplicaService:RegisterToken() can only be called on the server")
-	end
 	assert(replicaTokens[name] == nil, `ReplicaToken "{name}" already exists!`)
 	local token = setmetatable({
-		__ClassName = "ReplicaToken",
 		name = name,
-	}, {
-		__tostring = function(self)
-			return self.name
-		end,
-	})
+	}, ReplicaToken)
 	replicaTokens[name] = token
 	return token
 end
@@ -992,9 +1029,6 @@ export type ReplicaToken = typeof(ReplicaService:RegisterToken(...))
 	@return Replica -- The Replica.
 ]=]
 function ReplicaService:NewReplica(props: ReplicaProps)
-	if not RunService:IsServer() then
-		error("ReplicaService:NewReplica() can only be called on the server")
-	end
 	return Replica.new(props)
 end
 
@@ -1009,9 +1043,6 @@ end
 	@return Replica? -- Replica
 ]=]
 function ReplicaService:GetReplicaById(id: string): Replica?
-	if not RunService:IsServer() then
-		error("ReplicaService:GetReplicaById() can only be called on the server!")
-	end
 	return replicas[id]
 end
 
@@ -1032,6 +1063,7 @@ if RunService:IsServer() then
 	rep_Destroy = comm:CreateSignal("Destroy") -- (id: string)
 	--
 	activePlayers = {}
+	ReplicaService.ActivePlayers = activePlayers
 	replicaTokens = {}
 	replicas = {}
 	FILTER = {
@@ -1044,11 +1076,12 @@ if RunService:IsServer() then
 	onActivePlayerAdded = Signal.new() -- (player: Player) -> ()
 	onActivePlayerRemoved = Signal.new() -- (player: Player) -> ()
 	--
-	ReplicaService.Temporary = Replica.new({
+	TempReplica = Replica.new({
 		Token = ReplicaService:RegisterToken(HttpService:GenerateGUID(false)),
 		Filter = "Include",
 		FilterList = {},
 	})
+	ReplicaService.Temporary = TempReplica
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 	requestData:Connect(onPlayerRequestData)
 end

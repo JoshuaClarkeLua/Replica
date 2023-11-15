@@ -155,7 +155,7 @@ function Replica:OnDestroy(listener: (replica: Replica) -> ())
 end
 
 function Replica:SetValue(path: Common.Path, value: any, inclusion: { [Player]: boolean }?): ()
-	_onSetValue(self, path)
+	_onSetValue(self, path, value)
 end
 
 function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: { [Player]: boolean }?): ()
@@ -163,11 +163,11 @@ function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any 
 end
 
 function Replica:ArrayInsert(path: Common.Path, value: any, index: number?, inclusion: { [Player]: boolean }?): ()
-	_onArrayInsert(self, path)
+	_onArrayInsert(self, path, index, value)
 end
 
 function Replica:ArraySet(path: Common.Path, index: number, value: any, inclusion: { [Player]: boolean }?): ()
-	_onArraySet(self, path, index)
+	_onArraySet(self, path, index, value)
 end
 
 function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: { [Player]: boolean }?): ()
@@ -176,6 +176,10 @@ end
 
 function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnChange, path, listener)
+end
+
+function Replica:OnValuesChanged(path: Common.Path, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
+	return connectReplicaSignal(self, Common.SIGNAL.OnValuesChanged, path, listener)
 end
 
 function Replica:OnNewKey(path: Common.Path?, listener: (key: any, value: any) -> ())
@@ -192,6 +196,10 @@ end
 
 function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, value: any) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnArrayRemove, path, listener)
+end
+
+function Replica:OnKeyChanged(path: Common.Path, listener: (key: any, new: any, old: any) -> ())
+	return connectReplicaSignal(self, Common.SIGNAL.OnKeyChanged, path, listener)
 end
 
 function Replica:OnRawChange(path: Common.Path?, listener: (actionName: string, pathTable: Common.PathTable, ...any) -> ())
@@ -337,16 +345,17 @@ end
 	Requests the initial data from the server.
 ]=]
 function ReplicaController:RequestData(): ()
-	if not RunService:IsClient() then
-		error("ReplicaController:RequestData() can only be called on the client!")
-	end
 	local conn
 	conn = requestData:Connect(function(data)
+		ReplicaController.InitialDataReceived = true
 		for id, rootReplica: {any} in pairs(data) do
 			Replica.new(id, rootReplica[1], rootReplica[2], rootReplica[3], rootReplica[4])
 		end
 		conn:Disconnect()
 		requestData:Destroy()
+		onInitDataReceived:Fire()
+		onInitDataReceived:Destroy()
+		onInitDataReceived = nil
 	end)
 	requestData:Fire()
 end
@@ -362,9 +371,6 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function ReplicaController:OnNewReplica(listener: (replica: Replica) -> ())
-	if not RunService:IsClient() then
-		error("ReplicaController:OnNewReplica() can only be called on the client!")
-	end
 	return onReplicaCreated:Connect(listener)
 end
 
@@ -380,9 +386,6 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function ReplicaController:OnNewReplicaWithToken(token: string, listener: (replica: Replica) -> ())
-	if not RunService:IsClient() then
-		error("ReplicaController:OnNewReplicaWithToken() can only be called on the client!")
-	end
 	return getNewReplicaSignalForToken(token):Connect(listener)
 end
 
@@ -396,16 +399,12 @@ end
 	@param listener () -> () -- Callback function
 	@return Connection -- Signal Connection
 ]=]
-function ReplicaController:OnInitialDataReceived(listener: () -> ()): any
-	if not RunService:IsClient() then
-		error("ReplicaController:OnInitialDataReceived() can only be called on the client!")
-	end
+function ReplicaController:OnInitialDataReceived(listener: () -> ()): ()
 	if ReplicaController.InitialDataReceived then
 		task.spawn(listener)
 	else
-		return onInitDataReceived:Connect(listener)
+		onInitDataReceived:Connect(listener)
 	end
-	return
 end
 
 --[=[
@@ -419,9 +418,6 @@ end
 	@return Replica? -- Replica
 ]=]
 function ReplicaController:GetReplicaById(id: string): Replica?
-	if not RunService:IsClient() then
-		error("ReplicaController:GetReplicaById() can only be called on the client!")
-	end
 	return replicas[id]
 end
 
