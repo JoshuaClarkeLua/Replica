@@ -1,4 +1,5 @@
 # Replica
+Check out the [Documentation](https://joshuaclarkelua.github.io/Replica/)
 
 ## IMPORTANT
 In these examples, Replica is the Package required like below:
