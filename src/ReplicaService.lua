@@ -796,6 +796,23 @@ function Replica:ObserveState(path: Common.Path, valueObject: Value<any>): Conne
 end
 
 --[=[
+	@method Observe
+	@within Replica
+	@server
+	@client
+
+	Observes the value at the specified path and calls the observer function when it changes.
+	NOTE: The observer function will be called immediately with the current value at the path.
+
+	@param path Path -- The path to observe.
+	@param observer (new: any, old: any) -> () -- The function to call when the value at the path changes.
+	@return Connection -- Signal Connection
+]=]
+function Replica:Observe(path: Common.Path, observer: (new: any, old: any) -> ()): Connection
+	return Common.observe(self, path, observer)
+end
+
+--[=[
 	@method OnChildRemoved
 	@within Replica
 	@server

@@ -48,6 +48,7 @@ export type Replica = {
 	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
 	-- Observers
 	ObserveState: (self: Replica, path: Path, valueObject: Value<any>) -> Connection,
+	Observe: (self: Replica, path: Path, observer: (new: any, old: any) -> ()) -> Connection,
 
 	--[[
 		SERVER ONLY
@@ -433,6 +434,18 @@ end
 
 function Common.onSetParent(self: any, parent): ()
 	fireReplicaSignal(parent, SIGNAL.OnChildAdded, getSignalTable(parent), self)
+end
+
+function Common.observe(self: any, path: Path, observer: (new: any, old: any) -> ()): Connection
+	local pointer, index = getPathTablePointer(self.Data, false, nil, table.unpack(getPathTable(path)))
+	local value = nil
+	if pointer then
+		value = pointer[index]
+	end
+	observer(value, value)
+	return self:OnChange(path, function(new: any, old: any)
+		observer(new, old)
+	end)
 end
 
 function Common.observeState(self: any, path: Path, valueObject: Value<any>): Connection

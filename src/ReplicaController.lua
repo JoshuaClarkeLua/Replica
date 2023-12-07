@@ -214,6 +214,10 @@ function Replica:ObserveState(path: Common.Path, valueObject: Value<any>): Conne
 	return Common.observeState(self, path, valueObject)
 end
 
+function Replica:Observe(path: Common.Path, observer: (new: any, old: any) -> ()): Connection
+	return Common.observe(self, path, observer)
+end
+
 function Replica.new(
 	id: string,
 	token: string,
