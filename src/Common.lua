@@ -114,7 +114,7 @@ Common.TEMP = {} :: Replica
 
 local function assertTable(value: any): ()
 	if not value or typeof(value) ~= 'table' then
-		error(`Invalid path: Cannot index non-table value '{value}'`)
+		error(`Invalid path: Cannot index non-table value '{value}'`, 5)
 	end
 end
 
