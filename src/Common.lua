@@ -112,6 +112,11 @@ local SIGNAL = {
 Common.NIL = {}
 Common.TEMP = {} :: Replica
 
+local function assertTable(value: any): ()
+	if not value or typeof(value) ~= 'table' then
+		error(`Invalid path: Cannot index non-table value '{value}'`)
+	end
+end
 
 local function getPathTable(path: Path): PathTable
 	if type(path) == "table" then
@@ -393,6 +398,7 @@ end
 
 local function onArrayInsert(self: any, index: number?, value: any, pathTable, ...: PathIndex)
 	local pointer, pointer_index = getPathTablePointerCreate(self.Data, ...)
+	assertTable(pointer[pointer_index])
 	local _index = index or #pointer[pointer_index] + 1
 	table.insert(pointer[pointer_index], _index, value)
 	local signalTable = getSignalTable(self, nil, ...)
@@ -407,6 +413,7 @@ end
 
 local function onArraySet(self: any, index: number, value: any, pathTable, ...: PathIndex)
 	local pointer, _index = getPathTablePointerCreate(self.Data, ...)
+	assertTable(pointer[_index])
 	local old = pointer[_index][index]
 	if old == value then return end
 	pointer[_index][index] = value
@@ -419,8 +426,9 @@ function Common.onArraySet(self: any, path: Path, index: number, value: any): ()
 	return onArraySet(self, index, value, pathTable, table.unpack(pathTable))
 end
 
-local function onArrayRemoved(self: any, index: number, pathTable, ...: PathIndex)
+local function onArrayRemove(self: any, index: number, pathTable, ...: PathIndex)
 	local pointer, _index = getPathTablePointerCreate(self.Data, ...)
+	assertTable(pointer[_index])
 	local old = pointer[_index][index]
 	table.remove(pointer[_index], index)
 	local signalTable = getSignalTable(self, nil, ...)
@@ -429,7 +437,7 @@ local function onArrayRemoved(self: any, index: number, pathTable, ...: PathInde
 end
 function Common.onArrayRemove(self: any, path: Path, index: number): ()
 	local pathTable = getPathTable(path)
-	return onArrayRemoved(self, index, pathTable, table.unpack(pathTable))
+	return onArrayRemove(self, index, pathTable, table.unpack(pathTable))
 end
 
 function Common.onSetParent(self: any, parent): ()
