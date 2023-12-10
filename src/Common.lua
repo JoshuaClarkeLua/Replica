@@ -46,6 +46,7 @@ export type Replica = {
 	OnKeyChanged: (self: Replica, path: Path, listener: (key: any, new: any, old: any) -> ()) -> Connection,
 	OnRawChange: (self: Replica, path: Path?, listener: (actionName: string, pathArray: PathTable, ...any) -> ()) -> Connection,
 	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
+	OnNil: (self: Replica, path: Path, listener: (old: any) -> (), once: boolean?) -> Connection,
 	-- Observers
 	ObserveState: (self: Replica, path: Path, valueObject: Value<any>) -> Connection,
 	Observe: (self: Replica, path: Path, observer: (new: any, old: any) -> ()) -> Connection,
@@ -451,9 +452,11 @@ function Common.observe(self: any, path: Path, observer: (new: any, old: any) ->
 		value = pointer[index]
 	end
 	observer(value, value)
-	return self:OnChange(path, function(new: any, old: any)
+	local onChange
+	onChange = self:OnChange(path, function(new: any, old: any)
 		observer(new, old)
 	end)
+	return onChange
 end
 
 function Common.observeState(self: any, path: Path, valueObject: Value<any>): Connection
@@ -463,9 +466,52 @@ function Common.observeState(self: any, path: Path, valueObject: Value<any>): Co
 		value = pointer[index]
 	end
 	valueObject:set(value)
-	return self:OnChange(path, function(new: any)
+	local onChange
+	onChange = self:OnChange(path, function(new: any)
 		valueObject:set(new)
 	end)
+	return onChange
+end
+
+function Common.connectOnChange(self: any, path: Path, listener: (new: any, old: any) -> ()): RBXScriptConnection
+	return Common.connectReplicaSignal(self, SIGNAL.OnChange, path, listener)
+end
+
+function Common.connectOnValuesChanged(self: any, path: Path, listener: (new: {[PathIndex]: any}, old: {[PathIndex]: any}) -> ()): RBXScriptConnection
+	return Common.connectReplicaSignal(self, SIGNAL.OnValuesChanged, path, listener)
+end
+
+function Common.connectOnNewKey(self: any, path: Path?, listener: (key: any, value: any) -> ()): RBXScriptConnection
+	return Common.connectReplicaSignal(self, SIGNAL.OnNewKey, path, listener)
+end
+
+function Common.connectOnArrayInsert(self: any, path: Path, listener: (index: number, value: any) -> ()): RBXScriptConnection
+	return Common.connectReplicaSignal(self, SIGNAL.OnArrayInsert, path, listener)
+end
+
+function Common.connectOnArraySet(self: any, path: Path, listener: (index: number, value: any) -> ()): RBXScriptConnection
+	return Common.connectReplicaSignal(self, SIGNAL.OnArraySet, path, listener)
+end
+
+function Common.connectOnArrayRemove(self: any, path: Path, listener: (index: number, value: any) -> ()): RBXScriptConnection
+	return Common.connectReplicaSignal(self, SIGNAL.OnArrayRemove, path, listener)
+end
+
+function Common.connectOnKeyChanged(self: any, path: Path, listener: (key: any, new: any, old: any) -> ()): RBXScriptConnection
+	return Common.connectReplicaSignal(self, SIGNAL.OnKeyChanged, path, listener)
+end
+
+function Common.connectOnNil(self: any, path: Path, listener: (old: any) -> (), autoDisconnect: boolean?): RBXScriptConnection
+	local conn
+	conn = Common.connectOnChange(self, path, function(new: any, old: any)
+		if new == nil then
+			if autoDisconnect ~= false then
+				conn:Disconnect()
+			end
+			listener(old)
+		end
+	end)
+	return conn
 end
 
 function Common.identify(self: any): string

@@ -175,31 +175,35 @@ function Replica:ArrayRemove(path: Common.Path, index: number, inclusion: { [Pla
 end
 
 function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnChange, path, listener)
+	return Common.connectOnChange(self, path, listener)
 end
 
 function Replica:OnValuesChanged(path: Common.Path, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnValuesChanged, path, listener)
+	return Common.connectOnValuesChanged(self, path, listener)
 end
 
 function Replica:OnNewKey(path: Common.Path?, listener: (key: any, value: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnNewKey, path, listener)
+	return Common.connectOnNewKey(self, path, listener)
 end
 
 function Replica:OnArrayInsert(path: Common.Path, listener: (index: number, value: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnArrayInsert, path, listener)
+	return Common.connectOnArrayInsert(self, path, listener)
 end
 
 function Replica:OnArraySet(path: Common.Path, listener: (index: number, value: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnArraySet, path, listener)
+	return Common.connectOnArraySet(self, path, listener)
 end
 
 function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, value: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnArrayRemove, path, listener)
+	return Common.connectOnArrayRemove(self, path, listener)
 end
 
 function Replica:OnKeyChanged(path: Common.Path, listener: (key: any, new: any, old: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnKeyChanged, path, listener)
+	return Common.connectOnKeyChanged(self, path, listener)
+end
+
+function Replica:OnNil(path: Common.Path, listener: (old: any) -> (), once: boolean?): Connection
+	return Common.connectOnNil(self, path, listener, once)
 end
 
 function Replica:OnRawChange(path: Common.Path?, listener: (actionName: string, pathTable: Common.PathTable, ...any) -> ())

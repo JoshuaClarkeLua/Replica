@@ -649,7 +649,7 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnChange, path, listener)
+	return Common.connectOnChange(self, path, listener)
 end
 
 --[=[
@@ -665,7 +665,7 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function Replica:OnValuesChanged(path: Common.Path, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnValuesChanged, path, listener)
+	return Common.connectOnValuesChanged(self, path, listener)
 end
 
 --[=[
@@ -681,7 +681,7 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function Replica:OnNewKey(path: Common.Path?, listener: (key: any, value: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnNewKey, path, listener)
+	return Common.connectOnNewKey(self, path, listener)
 end
 
 --[=[
@@ -697,7 +697,7 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function Replica:OnArrayInsert(path: Common.Path, listener: (index: number, value: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnArrayInsert, path, listener)
+	return Common.connectOnArrayInsert(self, path, listener)
 end
 
 --[=[
@@ -713,7 +713,7 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function Replica:OnArraySet(path: Common.Path, listener: (index: number, value: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnArraySet, path, listener)
+	return Common.connectOnArraySet(self, path, listener)
 end
 
 --[=[
@@ -729,7 +729,7 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, value: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnArrayRemove, path, listener)
+	return Common.connectOnArrayRemove(self, path, listener)
 end
 
 --[=[
@@ -745,7 +745,24 @@ end
 	@return Connection -- Signal Connection
 ]=]
 function Replica:OnKeyChanged(path: Common.Path, listener: (key: any, new: any, old: any) -> ())
-	return connectReplicaSignal(self, Common.SIGNAL.OnKeyChanged, path, listener)
+	return Common.connectOnKeyChanged(self, path, listener)
+end
+
+--[=[
+	@method OnNil
+	@within Replica
+	@server
+	@client
+
+	Listens for the value at the specified path being set to nil.
+
+	@param path Path -- The path to listen for nil at.
+	@param listener (old: any) -> () -- The function to call when the value at the path is set to nil.
+	@param once boolean? -- Whether to disconnect the listener after it is called. Default: true
+	@return Connection -- Signal Connection
+]=]
+function Replica:OnNil(path: Common.Path, listener: (old: any) -> (), once: boolean?): Connection
+	return Common.connectOnNil(self, path, listener, once)
 end
 
 --[=[
