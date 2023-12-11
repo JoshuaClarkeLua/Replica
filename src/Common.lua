@@ -121,7 +121,20 @@ end
 
 local function getPathTable(path: Path): PathTable
 	if type(path) == "table" then
-		return table.clone(path)
+		local pathTable = {}
+		for _, key in pairs(path) do
+			local keyType = type(key)
+			if keyType ~= "string" and keyType ~= "number" then
+				error(`Invalid path: Cannot index non-string/number value "{key}"`, 3)
+			end
+			if keyType == 'string' and string.find(key :: string, '.') ~= nil then
+				local keys = string.split(key, ".")
+				table.move(keys, 1, #keys, #pathTable + 1, pathTable)
+			else
+				table.insert(pathTable, key)
+			end
+		end
+		return pathTable
 	end
 	return string.split(path, ".")
 end
