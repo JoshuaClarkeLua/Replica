@@ -151,6 +151,9 @@ function Replica:OnDestroy(listener: (replica: Replica) -> ())
 		task.spawn(listener, self)
 		return
 	end
+	if self._OnDestroy == nil then
+		self._OnDestroy = Signal.new()
+	end
 	return self._OnDestroy:Connect(listener)
 end
 
@@ -230,8 +233,6 @@ function Replica.new(
 	child_replica_data: { [string]: any }?,
 	parentId: string?
 ): Replica
-	local trove = Trove.new()
-
 	local self = setmetatable({
 		-- Identification
 		Id = id,
@@ -242,30 +243,8 @@ function Replica.new(
 		Data = data,
 		_parentId = parentId,
 		_children = {},
-		-- Signals
-		_OnDestroy = Signal.new(),
-		-- Cleanup
-		_trove = trove,
 	}, Replica)
 	replicas[self.Id] = self
-
-	trove:Add(function()
-		self._active = false
-		replicas[self.Id] = nil
-		Common.cleanSignals(self)
-
-		for child in pairs(self._children) do
-			child._trove:Destroy()
-		end
-
-		local parent = self:GetParent()
-		if parent ~= nil then
-			parent._children[self] = nil
-		end
-
-		self._OnDestroy:Fire(self)
-		self._OnDestroy:Destroy()
-	end)
 
 	-- Create children (if any)
 	local waitForParent = {}
@@ -311,6 +290,26 @@ function Replica.new(
 	return self
 end
 export type Replica = Common.Replica
+
+function Replica:_Destroy(): ()
+	self._active = false
+	replicas[self.Id] = nil
+	Common.cleanSignals(self)
+
+	for child in pairs(self._children) do
+		child:_Destroy()
+	end
+
+	local parent = self:GetParent()
+	if parent ~= nil then
+		parent._children[self] = nil
+	end
+
+	if self._OnDestroy ~= nil then
+		self._OnDestroy:Fire(self)
+		self._OnDestroy:Destroy()
+	end
+end
 
 
 --[[

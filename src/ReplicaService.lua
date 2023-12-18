@@ -415,8 +415,6 @@ end
 	Creates a new Replica.
 ]=]
 function Replica.new(props: ReplicaProps): Replica
-	local trove = Trove.new()
-
 	local replicationFilter = FILTER[props.Filter or "All"]
 	local filterList = props.FilterList
 
@@ -438,29 +436,8 @@ function Replica.new(props: ReplicaProps): Replica
 		_filterList = props.Parent == nil and filterList or nil,
 		_child_replica_data = props.Parent == nil and {} or nil,
 		_children = {},
-		-- Signals (setting them to nil uses memory...)
-		_OnDestroy = Signal.new(),
-		-- Cleanup
-		_trove = trove,
 	}, Replica)
 	replicas[self.Id] = self
-
-	trove:Add(function()
-		self._active = false
-		replicas[self.Id] = nil
-		Common.cleanSignals(self)
-
-		for child in pairs(self._children) do
-			child._trove:Destroy()
-		end
-
-		if self._parent ~= nil then
-			removeChild(self._parent, self)
-		end
-
-		self._OnDestroy:Fire(self)
-		self._OnDestroy:Destroy()
-	end)
 
 	if self._parent ~= nil then
 		addChild(self._parent, self)
@@ -845,6 +822,9 @@ function Replica:OnDestroy(listener: (replica: Replica) -> ())
 		task.spawn(listener, self)
 		return
 	end
+	if self._OnDestroy == nil then
+		self._OnDestroy = Signal.new()
+	end
 	return self._OnDestroy:Connect(listener)
 end
 
@@ -955,6 +935,25 @@ function Replica:RemoveFromFilter(player: Player): ()
 	removeFromFilter(self, player)
 end
 
+function Replica:_Destroy(): ()
+	self._active = false
+	replicas[self.Id] = nil
+	Common.cleanSignals(self)
+
+	for child in pairs(self._children) do
+		child:_Destroy()
+	end
+
+	if self._parent ~= nil then
+		removeChild(self._parent, self)
+	end
+
+	if self._OnDestroy ~= nil then
+		self._OnDestroy:Fire(self)
+		self._OnDestroy:Destroy()
+	end
+end
+
 --[=[
 	@method Destroy
 	@within Replica
@@ -964,7 +963,7 @@ end
 ]=]
 function Replica:Destroy(): ()
 	fireRemoteSignalForReplica(self, rep_Destroy)
-	self._trove:Destroy()
+	self:_Destroy()
 end
 
 --[=[
