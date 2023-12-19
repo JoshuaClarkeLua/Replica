@@ -546,7 +546,7 @@ end
 	@param values { [PathIndex]: any } -- The values to set.
 	@param inclusion Inclusion? -- Overrides the Replica's filtering settings for this call.
 ]=]
-function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: Inclusion?): ()
+function Replica:SetValues(path: Common.Path?, values: { [Common.PathIndex]: any }, inclusion: Inclusion?): ()
 	onSetValues(self, path, values)
 	local nilKeys = {}
 	local _values = table.clone(values)

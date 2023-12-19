@@ -95,6 +95,7 @@ export type Replica = {
 	@within Replica
 ]=]
 
+local EMPTY_TABLE = {}
 local Common = {}
 local SIGNAL_LIST = {}
 local SIGNAL = {
@@ -139,9 +140,12 @@ end
 
 local function getPathTablePointer(data: { [any]: any }, create: boolean, newKey: (key: PathIndex, value: any) -> ()?, ...: PathIndex): ({ [PathIndex]: any }?, PathIndex?, number?)
 	local pointer = data
-	local index = select(-1, ...)
-
 	local num = select('#', ...)
+	if num == 0 then
+		return pointer
+	end
+
+	local index = select(-1, ...)
 	local newKeyIndex: number
 	if num > 1 then
 		for i = 1, num - 1 do
@@ -374,14 +378,15 @@ function Common.onSetValue(self: any, path: Path, value: any)
 end
 
 local function onSetValues(self: any, values: { [PathIndex]: any }, nilKeys: { PathIndex }?, pathTable: PathTable, ...: PathIndex)
-	local pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, ...)
+	local _pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, ...)
 	local oldValues = {}
 	local num = select('#', ...) + 1
+	local pointer = index and _pointer[index] or _pointer
 	for key, value in pairs(values) do
 		if value == Common.NIL then
 			value = nil
 		end
-		local success, old = Common._onSetValue(self, newKeyIndex, pointer[index], key, value, num, ...)
+		local success, old = Common._onSetValue(self, newKeyIndex, pointer, key, value, num, ...)
 		if not success then
 			values[key] = nil
 		else
@@ -390,7 +395,7 @@ local function onSetValues(self: any, values: { [PathIndex]: any }, nilKeys: { P
 	end
 	if nilKeys ~= nil and #nilKeys > 0 then
 		for _, key in ipairs(nilKeys) do
-			local success, old = Common._onSetValue(self, newKeyIndex, pointer[index], key, nil, num, ...)
+			local success, old = Common._onSetValue(self, newKeyIndex, pointer, key, nil, num, ...)
 			if success then
 				values[key] = Common.NIL
 				oldValues[key] = old
@@ -403,8 +408,11 @@ local function onSetValues(self: any, values: { [PathIndex]: any }, nilKeys: { P
 		fireReplicaSignal(self, SIGNAL.OnRawChange, signalTable, "SetValues", pathTable, values)
 	end
 end
-function Common.onSetValues(self: any, path: Path, values: { [PathIndex]: any }, nilKeys: { PathIndex }?)
-	local pathTable = getPathTable(path)
+function Common.onSetValues(self: any, path: Path?, values: { [PathIndex]: any }, nilKeys: { PathIndex }?)
+	local pathTable = EMPTY_TABLE
+	if path ~= nil then
+		pathTable = getPathTable(path)
+	end
 	return onSetValues(self, values, nilKeys, pathTable, table.unpack(pathTable))
 end
 

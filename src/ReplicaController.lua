@@ -160,7 +160,7 @@ function Replica:SetValue(path: Common.Path, value: any, inclusion: { [Player]: 
 	_onSetValue(self, path, value)
 end
 
-function Replica:SetValues(path: Common.Path, values: { [Common.PathIndex]: any }, inclusion: { [Player]: boolean }?): ()
+function Replica:SetValues(path: Common.Path?, values: { [Common.PathIndex]: any }, inclusion: { [Player]: boolean }?): ()
 	_onSetValues(self, path, values)
 end
 
