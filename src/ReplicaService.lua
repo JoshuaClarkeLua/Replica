@@ -961,8 +961,8 @@ end
 	Destroys the Replica.
 ]=]
 function Replica:Destroy(): ()
-	fireRemoteSignalForReplica(self, rep_Destroy)
 	self:_Destroy()
+	fireRemoteSignalForReplica(self, rep_Destroy)
 end
 
 --[=[
