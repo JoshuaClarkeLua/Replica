@@ -6,7 +6,6 @@
 local RunService = game:GetService("RunService")
 local Comm = require(script.Parent.Parent.Comm)
 local Signal = require(script.Parent.Parent.Signal)
-local Trove = require(script.Parent.Parent.Trove)
 local Fusion = require(script.Parent.Parent.Fusion)
 local Common = require(script.Parent.Common)
 
@@ -119,7 +118,7 @@ local function onDestroy(id: string): ()
 	if self == nil then
 		return
 	end
-	self._trove:Destroy()
+	self:_Destroy()
 end
 
 function Replica:IsActive(): boolean

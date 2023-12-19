@@ -1,5 +1,4 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Trove = require(script.Parent.Parent.Trove)
 local Signal = require(script.Parent.Parent.Signal)
 local Fusion = require(script.Parent.Parent.Fusion)
 
@@ -80,7 +79,6 @@ export type Replica = {
 	_OnDestroy: Signal,
 	_filter: Filter,
 	_filterList: {[Player]: true},
-	_trove: typeof(Trove.new()),
 	_child_replica_data: {[string]: any}?,
 }
 
@@ -291,7 +289,7 @@ function Common.connectReplicaSignal(self: any, signalName: string, path: Path?,
 
 	local signal = signalTable[signalName]
 	if signal == nil then
-		signal = self._trove:Add(Signal.new())
+		signal = Signal.new()
 		signalTable[signalName] = signal
 		signal.Connect = function(self, listener: (...any) -> ())
 			local meta = getmetatable(self)

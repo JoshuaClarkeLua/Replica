@@ -8,7 +8,6 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local Comm = require(script.Parent.Parent.Comm)
 local Signal = require(script.Parent.Parent.Signal)
-local Trove = require(script.Parent.Parent.Trove)
 local Fusion = require(script.Parent.Parent.Fusion)
 local Common = require(script.Parent.Common)
 
