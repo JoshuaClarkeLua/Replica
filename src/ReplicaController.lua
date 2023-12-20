@@ -180,7 +180,7 @@ function Replica:OnChange(path: Common.Path, listener: (new: any, old: any) -> (
 	return Common.connectOnChange(self, path, listener)
 end
 
-function Replica:OnValuesChanged(path: Common.Path, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
+function Replica:OnValuesChanged(path: Common.Path?, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
 	return Common.connectOnValuesChanged(self, path, listener)
 end
 
@@ -200,7 +200,7 @@ function Replica:OnArrayRemove(path: Common.Path, listener: (index: number, valu
 	return Common.connectOnArrayRemove(self, path, listener)
 end
 
-function Replica:OnKeyChanged(path: Common.Path, listener: (key: any, new: any, old: any) -> ())
+function Replica:OnKeyChanged(path: Common.Path?, listener: (key: any, new: any, old: any) -> ())
 	return Common.connectOnKeyChanged(self, path, listener)
 end
 

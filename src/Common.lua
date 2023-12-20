@@ -340,25 +340,35 @@ function Common.cleanSignals(self: any): ()
 end
 
 local function _newKeyRecursive(self: any, numKeys: number, _pointer, i, ...: PathIndex): ()
-	if i == 0 or i > numKeys then return end
+	if i == 0 or i > numKeys then
+		return
+	end
 	local newKey = select(i, ...)
 	local newValue = _pointer[newKey]
 	_newKeyRecursive(self, numKeys, newValue, i + 1, ...)
 	fireReplicaSignal(self, SIGNAL.OnNewKey, getSignalTable(self, i - 1, ...), newKey, newValue)
 end
 
-function Common._onSetValue(self: any, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any, maxIndex: number, ...: PathIndex): (boolean, any)
+function Common._onSetValue(self: any, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any, maxIndex: number, pathHasIndex: boolean, ...: PathIndex): (boolean, any)
 	local old = pointer[index]
 	if old == value then return false end
 	pointer[index] = value
-	fireReplicaSignal(self, SIGNAL.OnChange, getSignalTable(self, nil, ...), value, old)
-	fireReplicaSignal(self, SIGNAL.OnKeyChanged, getSignalTable(self, nil, table.unpack({...}, nil, select('#', ...) - 1)), index, value, old)
+	local onChangeSignals = getSignalTable(self, nil, ...)
+	local onKeyChangedSignals = pathHasIndex and getSignalTable(self, nil, table.unpack({...}, nil, select('#', ...) - 1)) or onChangeSignals
+	if onChangeSignals and not pathHasIndex then
+		onChangeSignals = onChangeSignals[index]
+	end
+	fireReplicaSignal(self, SIGNAL.OnChange, onChangeSignals, value, old)
+	fireReplicaSignal(self, SIGNAL.OnKeyChanged, onKeyChangedSignals, index, value, old)
 	if old == nil then
 		local _newKeyIndex = newKeyIndex or maxIndex
 		local _pointer = self.Data
 		for i = 1, _newKeyIndex - 1 do
 			local key = select(i, ...)
 			_pointer = _pointer[key]
+		end
+		if not pathHasIndex then
+			fireReplicaSignal(self, SIGNAL.OnNewKey, onKeyChangedSignals, index, value)
 		end
 		_newKeyRecursive(self, select('#', ...), _pointer, _newKeyIndex, ...)
 	end
@@ -367,7 +377,7 @@ end
 
 local function onSetValue(self: any, value: any, pathTable, ...: PathIndex)
 	local pointer, index, newKeyIndex = getPathTablePointerCreate(self.Data, ...)
-	local success = Common._onSetValue(self, newKeyIndex, pointer, index, value, select('#', ...), ...)
+	local success = Common._onSetValue(self, newKeyIndex, pointer, index, value, select('#', ...), true, ...)
 	if success then
 		fireReplicaSignal(self, SIGNAL.OnRawChange, getSignalTable(self, nil, ...), "SetValue", pathTable, value)
 	end
@@ -386,7 +396,7 @@ local function onSetValues(self: any, values: { [PathIndex]: any }, nilKeys: { P
 		if value == Common.NIL then
 			value = nil
 		end
-		local success, old = Common._onSetValue(self, newKeyIndex, pointer, key, value, num, ...)
+		local success, old = Common._onSetValue(self, newKeyIndex, pointer, key, value, num, false, ...)
 		if not success then
 			values[key] = nil
 		else
@@ -395,7 +405,7 @@ local function onSetValues(self: any, values: { [PathIndex]: any }, nilKeys: { P
 	end
 	if nilKeys ~= nil and #nilKeys > 0 then
 		for _, key in ipairs(nilKeys) do
-			local success, old = Common._onSetValue(self, newKeyIndex, pointer, key, nil, num, ...)
+			local success, old = Common._onSetValue(self, newKeyIndex, pointer, key, nil, num, false, ...)
 			if success then
 				values[key] = Common.NIL
 				oldValues[key] = old
@@ -413,7 +423,7 @@ function Common.onSetValues(self: any, path: Path?, values: { [PathIndex]: any }
 	if path ~= nil then
 		pathTable = getPathTable(path)
 	end
-	return onSetValues(self, values, nilKeys, pathTable, table.unpack(pathTable))
+	return onSetValues(self, values, nilKeys, pathTable, path ~= nil and table.unpack(pathTable) or nil)
 end
 
 local function onArrayInsert(self: any, index: number?, value: any, pathTable, ...: PathIndex)

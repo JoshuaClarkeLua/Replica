@@ -640,7 +640,7 @@ end
 	@param listener (new: { [PathIndex]: any }, old: { [PathIndex]: any }) -> () -- The function to call when the values at the path change.
 	@return Connection -- Signal Connection
 ]=]
-function Replica:OnValuesChanged(path: Common.Path, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
+function Replica:OnValuesChanged(path: Common.Path?, listener: (new: {[Common.PathIndex]: any}, old: {[Common.PathIndex]: any}) -> ())
 	return Common.connectOnValuesChanged(self, path, listener)
 end
 
@@ -720,7 +720,7 @@ end
 	@param listener (key: any, new: any, old: any) -> () -- The function to call when a key changes at the path.
 	@return Connection -- Signal Connection
 ]=]
-function Replica:OnKeyChanged(path: Common.Path, listener: (key: any, new: any, old: any) -> ())
+function Replica:OnKeyChanged(path: Common.Path?, listener: (key: any, new: any, old: any) -> ())
 	return Common.connectOnKeyChanged(self, path, listener)
 end
 
