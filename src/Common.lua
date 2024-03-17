@@ -30,7 +30,7 @@ export type Replica = {
 	GetChildren: (self: Replica) -> {[Replica]: true},
 	-- Mutators
 	SetValue: (self: Replica, path: Path, value: any, inclusion: Inclusion?) -> (),
-	SetValues: (self: Replica, path: Path, values: {[PathIndex]: any}, inclusion: Inclusion?) -> (),
+	SetValues: (self: Replica, path: Path?, values: {[PathIndex]: any}, inclusion: Inclusion?) -> (),
 	ArrayInsert: (self: Replica, path: Path, value: any, index: number?, inclusion: Inclusion?) -> (),
 	ArraySet: (self: Replica, path: Path, index: number, value: any, inclusion: Inclusion?) -> (),
 	ArrayRemove: (self: Replica, path: Path, index: number, inclusion: Inclusion?) -> (),
@@ -42,7 +42,7 @@ export type Replica = {
 	OnArrayInsert: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnArraySet: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
 	OnArrayRemove: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
-	OnKeyChanged: (self: Replica, path: Path, listener: (key: any, new: any, old: any) -> ()) -> Connection,
+	OnKeyChanged: (self: Replica, path: Path?, listener: (key: any, new: any, old: any) -> ()) -> Connection,
 	OnRawChange: (self: Replica, path: Path?, listener: (actionName: string, pathArray: PathTable, ...any) -> ()) -> Connection,
 	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
 	OnNil: (self: Replica, path: Path, listener: (old: any) -> (), once: boolean?) -> Connection,
@@ -526,7 +526,7 @@ function Common.connectOnArrayRemove(self: any, path: Path, listener: (index: nu
 	return Common.connectReplicaSignal(self, SIGNAL.OnArrayRemove, path, listener)
 end
 
-function Common.connectOnKeyChanged(self: any, path: Path, listener: (key: any, new: any, old: any) -> ()): RBXScriptConnection
+function Common.connectOnKeyChanged(self: any, path: Path?, listener: (key: any, new: any, old: any) -> ()): RBXScriptConnection
 	return Common.connectReplicaSignal(self, SIGNAL.OnKeyChanged, path, listener)
 end
 
