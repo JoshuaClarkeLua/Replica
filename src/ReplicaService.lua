@@ -18,7 +18,6 @@ type Value<T> = Fusion.Value<T>
 type Signal = Common.Signal
 type Connection = Common.Connection
 
-type FilterName = Common.FilterName
 type Filter = Common.Filter
 type Inclusion = Common.Inclusion
 
@@ -26,7 +25,7 @@ export type ReplicaProps = {
 	Token: ReplicaToken,
 	Tags: { [string]: any }?, -- Default: {}
 	Data: { [string]: any }?, -- Default: {}
-	Filter: FilterName?, -- Default: "All"
+	Filter: Filter?, -- Default: "All"
 	FilterList: { [Player]: true }?, -- Default: {}
 	Parent: Replica?, -- Default: nil
 	-- WriteLib: any, -- ModuleScript
@@ -51,9 +50,9 @@ local activePlayers: { [Player]: true }
 local replicaTokens: { [string]: ReplicaToken }
 local replicas: { [string]: Replica }
 local FILTER: {
-	All: number,
-	Include: number,
-	Exclude: number,
+	All: "All",
+	Include: "Include",
+	Exclude: "Exclude",
 }
 local ALL: "All" = "All"
 local INCLUDE: "Include" = "Include"
@@ -96,11 +95,11 @@ local onActivePlayerRemoved
 --[=[
 	@interface FilterSettings
 	@within Replica
-	@field filter FilterName? -- The name of the Filter to set. If nil, the filter will not be changed.
+	@field filter Filter? -- The name of the Filter to set. If nil, the filter will not be changed.
 	@field players { [Player]: true }? -- List of players added to the filter list. If nil, the filter list will not be changed.
 ]=]
 --[=[
-	@type FilterName "All" | "Include" | "Exclude"
+	@type Filter "All" | "Include" | "Exclude"
 	@within Replica
 ]=]
 --[=[
@@ -1008,7 +1007,7 @@ end
 	@field Token ReplicaToken -- The ReplicaToken to create the Replica with.
 	@field Tags { [string]: any }? -- The tags to create the Replica with. Default: {}
 	@field Data { [string]: any }? -- The data to create the Replica with. Default: {}
-	@field Filter FilterName? -- The filter type to create the Replica with. Default: "All"
+	@field Filter Filter? -- The filter type to create the Replica with. Default: "All"
 	@field FilterList { [Player]: true }? -- The filter list to create the Replica with. Default: {}
 	@field Parent Replica? -- The parent to create the Replica with. Default: nil
 	@field WriteLib any? -- The write library to create the Replica with. Default: nil
@@ -1076,9 +1075,9 @@ if RunService:IsServer() then
 	replicaTokens = {}
 	replicas = {}
 	FILTER = {
-		All = 1,
-		Include = 2,
-		Exclude = 3,
+		All = ALL,
+		Include = INCLUDE,
+		Exclude = EXCLUDE,
 	}
 
 	-- Signals

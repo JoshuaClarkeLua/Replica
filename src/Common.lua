@@ -11,8 +11,7 @@ export type Connection = typeof(Signal.new(...):Connect(...))
 export type PathTable = {PathIndex}
 export type Path = string | PathTable
 export type PathIndex = string | number
-export type FilterName = "All" | "Include" | "Exclude"
-export type Filter = number
+export type Filter = "All" | "Include" | "Exclude"
 export type Inclusion = { [Player | "All"]: boolean? }
 export type Replica = {
 	Id: string,
