@@ -479,7 +479,7 @@ function Common.observe(self: any, path: Path, observer: (new: any, old: any) ->
 	if pointer then
 		value = pointer[index]
 	end
-	observer(value, value)
+	observer(value, nil)
 	local onChange
 	onChange = self:OnChange(path, function(new: any, old: any)
 		observer(new, old)
