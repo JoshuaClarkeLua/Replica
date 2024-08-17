@@ -3,7 +3,8 @@ local Common = require(script.Common)
 local Controller = require(script.ReplicaController)
 local Service = require(script.ReplicaService)
 
-export type Replica = Common.Replica
+export type ReplicaAny = Common.ReplicaAny
+export type Replica<Tags, Data> = Common.Replica<Tags, Data>
 export type Path = Common.Path
 export type Filter = Common.Filter
 export type Inclusion = Common.Inclusion

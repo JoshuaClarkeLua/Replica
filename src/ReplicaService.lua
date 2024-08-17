@@ -818,7 +818,9 @@ end
 function Replica:OnDestroy(listener: (replica: Replica) -> ())
 	if not self:IsActive() then
 		task.spawn(listener, self)
-		return
+		local conn = self._OnDestroy:Connect(function() end)
+		conn:Disconnect()
+		return conn
 	end
 	if self._OnDestroy == nil then
 		self._OnDestroy = Signal.new()

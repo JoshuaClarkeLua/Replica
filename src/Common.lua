@@ -13,73 +13,77 @@ export type Path = string | PathTable
 export type PathIndex = string | number
 export type Filter = "All" | "Include" | "Exclude"
 export type Inclusion = { [Player | "All"]: boolean? }
-export type Replica = {
+export type _Replica = {
 	Id: string,
-	Tags: {[any]: any},
-	Data: {[any]: any},
 
 	--[[
 		SHARED
 	]]
 	-- Getters
-	IsActive: (self: Replica) -> boolean,
-	Identify: (self: Replica) -> string,
-	GetToken: (self: Replica) -> string,
-	GetParent: (self: Replica) -> Replica?,
-	GetChildren: (self: Replica) -> {[Replica]: true},
+	IsActive: (self: _Replica) -> boolean,
+	Identify: (self: _Replica) -> string,
+	GetToken: (self: _Replica) -> string,
+	GetParent: (self: _Replica) -> _Replica?,
+	GetChildren: (self: _Replica) -> {[_Replica]: true},
 	-- Mutators
-	SetValue: (self: Replica, path: Path, value: any, inclusion: Inclusion?) -> (),
-	SetValues: (self: Replica, path: Path?, values: {[PathIndex]: any}, inclusion: Inclusion?) -> (),
-	ArrayInsert: (self: Replica, path: Path, value: any, index: number?, inclusion: Inclusion?) -> (),
-	ArraySet: (self: Replica, path: Path, index: number, value: any, inclusion: Inclusion?) -> (),
-	ArrayRemove: (self: Replica, path: Path, index: number, inclusion: Inclusion?) -> (),
+	SetValue: (self: _Replica, path: Path, value: any, inclusion: Inclusion?) -> (),
+	SetValues: (self: _Replica, path: Path?, values: {[PathIndex]: any}, inclusion: Inclusion?) -> (),
+	ArrayInsert: (self: _Replica, path: Path, value: any, index: number?, inclusion: Inclusion?) -> (),
+	ArraySet: (self: _Replica, path: Path, index: number, value: any, inclusion: Inclusion?) -> (),
+	ArrayRemove: (self: _Replica, path: Path, index: number, inclusion: Inclusion?) -> (),
 	-- Listeners
-	OnDestroy: (self: Replica, listener: (replica: Replica) -> ()) -> Connection?,
-	OnChange: (self: Replica, path: Path, listener: (new: any, old: any) -> ()) -> Connection,
-	OnValuesChanged: (self: Replica, path: Path?, listener: (new: {[PathIndex]: any}, old: {[PathIndex]: any}) -> ()) -> Connection,
-	OnNewKey: (self: Replica, path: Path?, listener: (key: any, value: any) -> ()) -> Connection,
-	OnArrayInsert: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
-	OnArraySet: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
-	OnArrayRemove: (self: Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
-	OnKeyChanged: (self: Replica, path: Path?, listener: (key: any, new: any, old: any) -> ()) -> Connection,
-	OnRawChange: (self: Replica, path: Path?, listener: (actionName: string, pathArray: PathTable, ...any) -> ()) -> Connection,
-	OnChildAdded: (self: Replica, listener: (child: Replica) -> ()) -> Connection,
-	OnNil: (self: Replica, path: Path, listener: (old: any) -> (), once: boolean?) -> Connection,
+	OnDestroy: (self: _Replica, listener: (replica: _Replica) -> ()) -> Connection,
+	OnChange: (self: _Replica, path: Path, listener: (new: any, old: any) -> ()) -> Connection,
+	OnValuesChanged: (self: _Replica, path: Path?, listener: (new: {[PathIndex]: any}, old: {[PathIndex]: any}) -> ()) -> Connection,
+	OnNewKey: (self: _Replica, path: Path?, listener: (key: any, value: any) -> ()) -> Connection,
+	OnArrayInsert: (self: _Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
+	OnArraySet: (self: _Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
+	OnArrayRemove: (self: _Replica, path: Path, listener: (index: number, value: any) -> ()) -> Connection,
+	OnKeyChanged: (self: _Replica, path: Path?, listener: (key: any, new: any, old: any) -> ()) -> Connection,
+	OnRawChange: (self: _Replica, path: Path?, listener: (actionName: string, pathArray: PathTable, ...any) -> ()) -> Connection,
+	OnChildAdded: (self: _Replica, listener: (child: _Replica) -> ()) -> Connection,
+	OnNil: (self: _Replica, path: Path, listener: (old: any) -> (), once: boolean?) -> Connection,
 	-- Observers
-	ObserveState: (self: Replica, path: Path, valueObject: Value<any>) -> Connection,
-	Observe: (self: Replica, path: Path, observer: (new: any, old: any) -> ()) -> Connection,
+	ObserveState: (self: _Replica, path: Path, valueObject: Value<any>) -> Connection,
+	Observe: (self: _Replica, path: Path, observer: (new: any, old: any) -> ()) -> Connection,
 
 	--[[
 		SERVER ONLY
 	]]
 	-- Getters
-	GetFilterList: (self: Replica) -> { [Player]: true },
-	GetFilter: (self: Replica) -> Filter,
+	GetFilterList: (self: _Replica) -> { [Player]: true },
+	GetFilter: (self: _Replica) -> Filter,
 	-- Mutators
-	SetParent: (self: Replica, parent: Replica) -> (),
-	SetReplication: (self: Replica, settings: {
+	SetParent: (self: _Replica, parent: _Replica) -> (),
+	SetReplication: (self: _Replica, settings: {
 		filter: Filter?,
 		players: { [Player]: true }?,
 	}) -> (),
-	AddToFilter: (self: Replica, player: Player) -> (),
-	RemoveFromFilter: (self: Replica, player: Player) -> (),
-	Destroy: (self: Replica) -> (),
+	AddToFilter: (self: _Replica, player: Player) -> (),
+	RemoveFromFilter: (self: _Replica, player: Player) -> (),
+	Destroy: (self: _Replica) -> (),
 
 	-- Private methods
-	_GetChildReplicaData: (self: Replica) -> {[string]: any},
+	_GetChildReplicaData: (self: _Replica) -> {[string]: any},
 	
 	-- Private Variables
 	_token: string,
 	_active: boolean,
 	_parentId: string?,
-	_parent: Replica?,
-	_children: {[Replica]: true},
+	_parent: _Replica?,
+	_children: {[_Replica]: true},
 	_signals: {[any]: any}?,
 	_OnDestroy: Signal,
 	_filter: Filter,
 	_filterList: {[Player]: true},
 	_child_replica_data: {[string]: any}?,
 }
+export type Replica<Tags, Data> = _Replica & {
+	Tags: Tags,
+	Data: Data,
+}
+type Table = { [string]: Table | any }
+export type ReplicaAny = Replica<Table, Table>
 
 --[=[
 	@type PathTable {string | number}
