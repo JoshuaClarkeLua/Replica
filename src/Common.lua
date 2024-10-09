@@ -349,7 +349,9 @@ local function _newKeyRecursive(self: any, numKeys: number, _pointer, i, ...: Pa
 	local newKey = select(i, ...)
 	local newValue = _pointer[newKey]
 	_newKeyRecursive(self, numKeys, newValue, i + 1, ...)
-	fireReplicaSignal(self, SIGNAL.OnNewKey, getSignalTable(self, i - 1, ...), newKey, newValue)
+	local signalTable = getSignalTable(self, i - 1, ...)
+	fireReplicaSignal(self, SIGNAL.OnKeyChanged, signalTable, newKey, newValue, nil)
+	fireReplicaSignal(self, SIGNAL.OnNewKey, signalTable, newKey, newValue)
 end
 
 function Common._onSetValue(self: any, newKeyIndex: number?, pointer:{[PathIndex]: any}, index: PathIndex, value: any, maxIndex: number, pathHasIndex: boolean, ...: PathIndex): (boolean, any)
