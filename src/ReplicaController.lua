@@ -6,12 +6,7 @@
 local RunService = game:GetService("RunService")
 local Comm = require(script.Parent.Parent.Comm)
 local Signal = require(script.Parent.Parent.Signal)
-local Fusion = require(script.Parent.Parent.Fusion)
 local Common = require(script.Parent.Common)
-
--- Fusion Imports
-type Value<T> = Fusion.Value<T>
---
 
 type Signal = Common.Signal
 type Connection = Common.Connection
@@ -148,7 +143,9 @@ end
 function Replica:OnDestroy(listener: (replica: Replica) -> ())
 	if not self:IsActive() then
 		task.spawn(listener, self)
-		return
+		local conn = self._OnDestroy:Connect(function() end)
+		conn:Disconnect()
+		return conn
 	end
 	if self._OnDestroy == nil then
 		self._OnDestroy = Signal.new()
@@ -214,10 +211,6 @@ end
 
 function Replica:OnChildAdded(listener: (child: Replica) -> ())
 	return connectReplicaSignal(self, Common.SIGNAL.OnChildAdded, nil, listener)
-end
-
-function Replica:ObserveState(path: Common.Path, valueObject: Value<any>): Connection
-	return Common.observeState(self, path, valueObject)
 end
 
 function Replica:Observe(path: Common.Path, observer: (new: any, old: any) -> ()): Connection

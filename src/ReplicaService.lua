@@ -8,12 +8,7 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local Comm = require(script.Parent.Parent.Comm)
 local Signal = require(script.Parent.Parent.Signal)
-local Fusion = require(script.Parent.Parent.Fusion)
 local Common = require(script.Parent.Common)
-
--- Fusion Imports
-type Value<T> = Fusion.Value<T>
---
 
 type Signal = Common.Signal
 type Connection = Common.Connection
@@ -772,22 +767,6 @@ function Replica:OnChildAdded(listener: (child: Replica) -> ())
 end
 
 --[=[
-	@method ObserveState
-	@within Replica
-	@server
-	@client
-
-	Observes the value at the specified path and sets it as the value of the Fusion Value object.
-
-	@param path Path -- The path to observe.
-	@param valueObject Value<any> -- The Fusion Value object to set the value of.
-	@return Connection -- Signal Connection
-]=]
-function Replica:ObserveState(path: Common.Path, valueObject: Value<any>): Connection
-	return Common.observeState(self, path, valueObject)
-end
-
---[=[
 	@method Observe
 	@within Replica
 	@server
@@ -818,7 +797,9 @@ end
 function Replica:OnDestroy(listener: (replica: Replica) -> ())
 	if not self:IsActive() then
 		task.spawn(listener, self)
-		return
+		local conn = self._OnDestroy:Connect(function() end)
+		conn:Disconnect()
+		return conn
 	end
 	if self._OnDestroy == nil then
 		self._OnDestroy = Signal.new()
