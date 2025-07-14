@@ -366,10 +366,8 @@ function Common._onSetValue(self: any, newKeyIndex: number?, pointer:{[PathIndex
 			local key = select(i, ...)
 			_pointer = _pointer[key]
 		end
-		if not pathHasIndex then
-			fireReplicaSignal(self, SIGNAL.OnNewKey, onKeyChangedSignals, index, value)
-		end
-		_newKeyRecursive(self, select('#', ...), _pointer, _newKeyIndex, ...)
+		fireReplicaSignal(self, SIGNAL.OnNewKey, onKeyChangedSignals, index, value)
+		_newKeyRecursive(self, select('#', ...) - 1, _pointer, _newKeyIndex, ...)
 	end
 	return true, old
 end
