@@ -204,4 +204,10 @@ if RunService:IsServer() then
 	Replica.INCLUDE = Service.INCLUDE
 	Replica.EXCLUDE = Service.EXCLUDE
 end
-return Replica
+return Replica :: typeof(Replica) & {
+	InitialDataReceived: boolean;
+	TEMP: typeof(Service.Temporary);
+	ALL: typeof(Service.ALL);
+	INCLUDE: typeof(Service.INCLUDE);
+	EXCLUDE: typeof(Service.EXCLUDE);
+}
