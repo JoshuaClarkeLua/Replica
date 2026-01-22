@@ -15,6 +15,14 @@ export type Inclusion = Common.Inclusion
 	Module that contains the Replica API.
 ]=]
 local Replica = {}
+setmetatable(Replica, {
+	__index = function(self, key)
+		if RunService:IsServer() then
+			return Service[key]
+		end
+		return Controller[key]
+	end,
+})
 
 --[[
 	SERVER
